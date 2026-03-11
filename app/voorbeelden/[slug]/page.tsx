@@ -10,7 +10,8 @@ export default async function ExampleDetailPage({ params }: { params: Promise<{ 
   if (!example) notFound();
 
   const result = generatePromptRun(example.input, {
-    runId: createRunId(example.input.run_metadata.source_project, new Date(example.input.run_metadata.date))
+    runId: createRunId(example.input.run_metadata.source_project, new Date(example.input.run_metadata.date)),
+    selectedProviders: example.input.selectedProviders
   });
 
   return (
@@ -22,10 +23,10 @@ export default async function ExampleDetailPage({ params }: { params: Promise<{ 
         <p className="mt-3 text-base leading-7 text-mist/65">{example.whyItMatters}</p>
       </div>
       <div className="mt-8 rounded-3xl border border-white/10 bg-white/5 p-5 text-sm leading-7 text-mist/75 shadow-glow">
-        Dit is een referentiecase. De generator blijft generiek; gebruik dit voorbeeld om inputstructuur en outputvorm te begrijpen.
+        Dit is een referentiecase. De generator blijft generiek; gebruik dit voorbeeld om inputstructuur, providerkeuze en outputvorm te begrijpen.
       </div>
       <div className="mt-8">
-        <ArtifactTabs runId={result.snapshotRef} artifacts={result.artifacts} />
+        <ArtifactTabs artifacts={result.artifacts} downloadable={false} />
       </div>
     </div>
   );

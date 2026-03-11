@@ -41,42 +41,59 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Ongeldige JSON in de aanvraag." }, { status: 400 });
   }
 
-  const normalized = normalizeRunInput(raw);
-  const storage = getStorage();
-  const currentArtifacts = await storage.readCurrentArtifacts();
-  const runId = createRunId(normalized.run_metadata.source_project || "run");
-  const result = generatePromptRun(normalized, { runId, currentArtifacts });
+  try {
+    const normalized = normalizeRunInput(raw);
+    const storage = getStorage();
+    const currentArtifacts = await storage.readCurrentArtifacts();
+    const runId = createRunId(normalized.run_metadata.source_project || "run");
+    const result = generatePromptRun(normalized, {
+      runId,
+      currentArtifacts,
+      selectedProviders: normalized.selectedProviders
+    });
 
-  if (result.qualityScore === "fail") {
+    if (result.qualityScore === "fail") {
+      return NextResponse.json(
+        {
+          error: "De run is geblokkeerd door validatieproblemen.",
+          blockingIssues: result.blockingIssues,
+          warnings: result.warnings,
+          selectedProviders: result.selectedProviders
+        },
+        { status: 422 }
+      );
+    }
+
+    const storedRun: StoredRun = {
+      id: runId,
+      createdAt: result.createdAt,
+      qualityScore: result.qualityScore,
+      validationResult: result.validationResult,
+      input: normalized,
+      artifacts: result.artifacts,
+      warnings: result.warnings,
+      blockingIssues: result.blockingIssues,
+      diffSummary: result.diffSummary,
+      snapshotRef: result.snapshotRef,
+      selectedProviders: result.selectedProviders
+    };
+
+    await storage.saveRun(storedRun);
+
+    return NextResponse.json({
+      id: runId,
+      qualityScore: result.qualityScore,
+      warnings: result.warnings,
+      blockingIssues: result.blockingIssues,
+      selectedProviders: result.selectedProviders
+    });
+  } catch (error) {
+    console.error("POST /api/runs failed", error);
     return NextResponse.json(
       {
-        error: "De run is geblokkeerd door validatieproblemen.",
-        blockingIssues: result.blockingIssues,
-        warnings: result.warnings
+        error: error instanceof Error ? `Run opslaan of genereren mislukte: ${error.message}` : "Run opslaan of genereren mislukte."
       },
-      { status: 422 }
+      { status: 500 }
     );
   }
-
-  const storedRun: StoredRun = {
-    id: runId,
-    createdAt: result.createdAt,
-    qualityScore: result.qualityScore,
-    validationResult: result.validationResult,
-    input: normalized,
-    artifacts: result.artifacts,
-    warnings: result.warnings,
-    blockingIssues: result.blockingIssues,
-    diffSummary: result.diffSummary,
-    snapshotRef: result.snapshotRef
-  };
-
-  await storage.saveRun(storedRun);
-
-  return NextResponse.json({
-    id: runId,
-    qualityScore: result.qualityScore,
-    warnings: result.warnings,
-    blockingIssues: result.blockingIssues
-  });
 }

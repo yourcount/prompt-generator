@@ -9,8 +9,8 @@ const display = Fraunces({ subsets: ["latin"], variable: "--font-display" });
 const body = Space_Grotesk({ subsets: ["latin"], variable: "--font-body" });
 
 export const metadata: Metadata = {
-  title: "Prompt Foundry | Webinterface voor de superprompt generator",
-  description: "Publieke webapp om de v3 prompt-generator gebruiksvriendelijk te draaien, uit te leggen en de artifacts direct toegankelijk te maken."
+  title: "Prompt Foundry | Multi-provider prompt generator",
+  description: "Publieke webapp om prompt-runs gebruiksvriendelijk te draaien, uit te leggen en directe output te genereren voor OpenAI, Claude en Gemini."
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {

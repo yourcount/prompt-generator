@@ -36,7 +36,7 @@ const bohemInput: PromptRunInput = {
     tone_of_voice: "Warm, theatraal, doorleefd, professioneel en menselijk"
   },
   repo_artifacts: {
-    paths: ["app/", "components/", "lib/", "docs/release-matrix.md", "docs/prompt-framework/"],
+    paths: ["app/", "components/", "lib/", "docs/release-matrix.md"],
     categories: ["frontend", "admin", "super-admin", "seo", "security", "caching", "deployment"]
   },
   run_metadata: {
@@ -51,7 +51,8 @@ const bohemInput: PromptRunInput = {
   scope_notes: [
     "Bohèm blijft een leer- en referentiecase, niet de default voor nieuwe runs.",
     "Deze input mag gebruikt worden om regressies in branding, content parity en beheerflows te illustreren."
-  ]
+  ],
+  selectedProviders: ["openai", "claude", "gemini"]
 };
 
 export const exampleCases: ExampleCase[] = [
@@ -72,7 +73,7 @@ export const exampleCases: ExampleCase[] = [
       conversation_source: {
         type: "phase-summary",
         source: "Implementatiebrief voor Prompt Foundry",
-        summary: "Nieuwe publieke webapp die de v3 prompt-generator als wizard, advanced panel en artifactviewer beschikbaar maakt, inclusief uitleg, voorbeelden en Vercel-ready opslag."
+        summary: "Nieuwe publieke webapp die de v4 prompt-generator als wizard, provider-switcher en artifactviewer beschikbaar maakt, inclusief uitleg, voorbeelden en Vercel-ready opslag."
       },
       project_context: {
         brand: "Prompt Foundry",
@@ -81,7 +82,7 @@ export const exampleCases: ExampleCase[] = [
           "Technische builders die parity tussen CLI en web willen behouden",
           "Projectleads die alle output van een generator-run direct willen kunnen delen"
         ],
-        website_goal: "Bouw een publieke, gebruiksvriendelijke webinterface voor de v3 prompt-generator, inclusief uitleg, echte runs en toegankelijke artifacts.",
+        website_goal: "Bouw een publieke, gebruiksvriendelijke webinterface voor de v4 prompt-generator, inclusief uitleg, echte runs en toegankelijke artifacts.",
         features: [
           "Wizard-first generatorinterface met advanced JSON-panel",
           "Artifactviewer met tabs, kopieeracties en downloads",
@@ -112,7 +113,8 @@ export const exampleCases: ExampleCase[] = [
       scope_notes: [
         "Bohèm blijft een reference case.",
         "Outputviewer moet ook zonder voorkennis begrijpelijk zijn."
-      ]
+      ],
+      selectedProviders: ["openai", "claude", "gemini"]
     }
   },
   {

@@ -10,7 +10,7 @@ export default async function ArtifactsPage() {
       <div className="mb-8 max-w-3xl">
         <p className="text-xs uppercase tracking-[0.32em] text-amber">Artifacts</p>
         <h1 className="mt-3 font-serif text-5xl text-white">Recente runs en hun output.</h1>
-        <p className="mt-4 text-lg leading-8 text-mist/80">Elke succesvolle run bewaart input, artifacts en run-report. Daardoor kun je generator-output altijd teruglezen of opnieuw downloaden.</p>
+        <p className="mt-4 text-lg leading-8 text-mist/80">Elke succesvolle run bewaart input, gedeelde artifacts en providerprompts. Daardoor kun je generator-output altijd teruglezen of opnieuw downloaden.</p>
       </div>
       <div className="grid gap-5">
         {runs.length === 0 ? (
@@ -23,6 +23,7 @@ export default async function ArtifactsPage() {
                   <p className="text-xs uppercase tracking-[0.22em] text-teal">{run.qualityScore}</p>
                   <h2 className="mt-2 font-serif text-3xl text-white">{run.brand}</h2>
                   <p className="mt-2 text-sm text-mist/70">{run.sourceProject} · {new Date(run.createdAt).toLocaleString("nl-NL")}</p>
+                  <p className="mt-2 text-sm text-mist/60">Providers: {(run.selectedProviders ?? []).join(", ") || "base only"}</p>
                 </div>
                 <div className="rounded-full border border-white/10 px-4 py-2 text-sm font-semibold text-white">Bekijk output</div>
               </div>

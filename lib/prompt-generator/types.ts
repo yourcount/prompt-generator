@@ -1,5 +1,24 @@
 export type LessonLabel = "success" | "regression" | "misunderstanding" | "process_change";
 
+export type ProviderId = "openai" | "claude" | "gemini";
+
+export type ProviderPromptMap = Partial<Record<ProviderId, string>>;
+
+export type ProviderProfile = {
+  id: ProviderId;
+  label: string;
+  profileVersion: string;
+  recommendedModelFamily: string;
+  lastVerifiedAt: string;
+  bestPracticeSummary: string[];
+  promptConstructionRules: string[];
+  outputHints: string[];
+  sourceReferences: Array<{
+    label: string;
+    url: string;
+  }>;
+};
+
 export type PromptRunInput = {
   conversation_source: {
     type: string;
@@ -33,11 +52,22 @@ export type PromptRunInput = {
   };
   success_criteria: string[];
   scope_notes: string[];
+  selectedProviders?: ProviderId[];
 };
 
-export type ArtifactKey = "superPrompt" | "playbook" | "decisionRegister" | "promptEvents" | "runReport";
+export type SharedArtifactKey = "basePrompt" | "playbook" | "decisionRegister" | "promptEvents" | "runReport";
+export type LegacyArtifactKey = "superPrompt";
+export type DownloadArtifactKey = SharedArtifactKey | LegacyArtifactKey | `provider-${ProviderId}`;
 
-export type GeneratedArtifacts = Record<ArtifactKey, string>;
+export type GeneratedArtifacts = {
+  basePrompt: string;
+  playbook: string;
+  decisionRegister: string;
+  promptEvents: string;
+  runReport: string;
+  providerPrompts: ProviderPromptMap;
+  legacySuperPrompt?: string;
+};
 
 export type DiffItem = {
   label: string;
@@ -53,6 +83,7 @@ export type PromptRunResult = {
   diffSummary: DiffItem[];
   snapshotRef: string;
   createdAt: string;
+  selectedProviders?: ProviderId[];
 };
 
 export type StoredRun = {
@@ -66,6 +97,7 @@ export type StoredRun = {
   blockingIssues: string[];
   diffSummary: DiffItem[];
   snapshotRef: string;
+  selectedProviders?: ProviderId[];
 };
 
 export type RunSummary = {
@@ -75,4 +107,5 @@ export type RunSummary = {
   sourceProject: string;
   qualityScore: PromptRunResult["qualityScore"];
   validationResult: PromptRunResult["validationResult"];
+  selectedProviders?: ProviderId[];
 };

@@ -2,7 +2,7 @@
   "conversation_source": {
     "type": "phase-summary",
     "source": "Implementatiebrief voor Prompt Foundry",
-    "summary": "Nieuwe publieke webapp die de v3 prompt-generator als wizard, advanced panel en artifactviewer beschikbaar maakt, inclusief uitleg, voorbeelden en Vercel-ready opslag."
+    "summary": "Nieuwe publieke webapp die de v4 prompt-generator als wizard, provider-switcher en artifactviewer beschikbaar maakt, inclusief uitleg, voorbeelden en Vercel-ready opslag."
   },
   "project_context": {
     "brand": "Prompt Foundry",
@@ -11,7 +11,7 @@
       "Technische builders die parity tussen CLI en web willen behouden",
       "Projectleads die alle output van een generator-run direct willen kunnen delen"
     ],
-    "website_goal": "Bouw een publieke, gebruiksvriendelijke webinterface voor de v3 prompt-generator, inclusief uitleg, echte runs en toegankelijke artifacts.",
+    "website_goal": "Bouw een publieke, gebruiksvriendelijke webinterface voor de v4 prompt-generator, inclusief uitleg, echte runs en toegankelijke artifacts.",
     "features": [
       "Wizard-first generatorinterface met advanced JSON-panel",
       "Artifactviewer met tabs, kopieeracties en downloads",
@@ -31,10 +31,22 @@
     "categories": ["generator-core", "web-ui", "storage", "api", "documentation"]
   },
   "lessons_learned": [
-    { "label": "success", "summary": "Een wizard met duidelijke helperteksten verlaagt de drempel voor niet-technische gebruikers." },
-    { "label": "regression", "summary": "File-only opslag botst met serverless deploys als er geen adapterlaag is." },
-    { "label": "misunderstanding", "summary": "Voorbeeldcases moeten expliciet referentie blijven, anders voelt de generator merkgebonden." },
-    { "label": "process_change", "summary": "De generator-core moet gedeeld worden tussen web en CLI om parity en onderhoudbaarheid te houden." }
+    {
+      "label": "success",
+      "summary": "Een wizard-first flow verlaagt de drempel voor niet-technische gebruikers."
+    },
+    {
+      "label": "regression",
+      "summary": "Opslagpaden die niet uniek genoeg zijn breken productieflows op Blob-opslag."
+    },
+    {
+      "label": "misunderstanding",
+      "summary": "Een generator kan generiek blijven terwijl een reference case merkgebonden is."
+    },
+    {
+      "label": "process_change",
+      "summary": "Providerprofielen moeten als versioned code worden beheerd, niet als vrije prompttekst."
+    }
   ],
   "open_questions": [],
   "run_metadata": {
@@ -42,8 +54,8 @@
     "operator": "CLI",
     "source_project": "Prompt Foundry",
     "output_language": "nl",
-    "framework_version": "v3",
-    "template_version": "2026-03-v1"
+    "framework_version": "v4",
+    "template_version": "2026-03-v2"
   },
   "success_criteria": [
     "Een gemengd publiek moet zonder terminal een valide generator-run kunnen starten.",
@@ -53,5 +65,6 @@
   "scope_notes": [
     "Bohèm blijft een reference case.",
     "Outputviewer moet ook zonder voorkennis begrijpelijk zijn."
-  ]
+  ],
+  "selectedProviders": ["openai", "claude", "gemini"]
 }

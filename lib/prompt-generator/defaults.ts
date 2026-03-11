@@ -3,7 +3,7 @@ import type { PromptRunInput } from "@/lib/prompt-generator/types";
 export const defaultRunInput: PromptRunInput = {
   conversation_source: {
     type: "phase-summary",
-    source: "Afgerond websiteproject in Codex",
+    source: "Afgerond website- of producttraject in een AI-assistent",
     summary:
       "Samengevat traject met briefing, ontwerpkeuzes, iteratieve correcties, technische oplevering en lessons learned voor een website met frontend en beheeromgeving."
   },
@@ -29,7 +29,7 @@ export const defaultRunInput: PromptRunInput = {
     tone_of_voice: "Helder, professioneel, menselijk en taakgericht"
   },
   repo_artifacts: {
-    paths: ["app/", "components/", "lib/", "docs/prompt-framework/"],
+    paths: ["app/", "components/", "lib/"],
     categories: ["frontend", "admin", "seo", "security", "documentation"]
   },
   lessons_learned: [
@@ -56,8 +56,8 @@ export const defaultRunInput: PromptRunInput = {
     operator: "Web App",
     source_project: "Voorbeeldproject",
     output_language: "nl",
-    framework_version: "v3",
-    template_version: "2026-03-v1"
+    framework_version: "v4",
+    template_version: "2026-03-v2"
   },
   success_criteria: [
     "Nieuwe projectstarts moeten binnen één prompt een stabiele structuur afdwingen.",
@@ -67,5 +67,6 @@ export const defaultRunInput: PromptRunInput = {
   scope_notes: [
     "Generator blijft generiek en JSON-first.",
     "Deze run automatiseert structuur en logging, niet inhoudelijke projectanalyse."
-  ]
+  ],
+  selectedProviders: ["openai", "claude", "gemini"]
 };

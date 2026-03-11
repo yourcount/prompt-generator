@@ -5,11 +5,12 @@ import { useRouter } from "next/navigation";
 
 import { createRun } from "@/lib/prompt-generator/api";
 import { defaultRunInput } from "@/lib/prompt-generator/defaults";
-import type { LessonLabel, PromptRunInput } from "@/lib/prompt-generator/types";
+import { getProviderProfiles } from "@/lib/prompt-generator/providers";
+import type { LessonLabel, PromptRunInput, ProviderId } from "@/lib/prompt-generator/types";
 
 const steps = [
-  { title: "Projectcontext", helper: "Wie is het project, wat is het doel en welke toon hoort daarbij?" },
-  { title: "Doelgroepen en doelen", helper: "Voor wie maak je deze superprompt en wat moet hij bereiken?" },
+  { title: "Projectcontext", helper: "Wie is het project, wat is het doel en welke AI-profielen moeten direct output krijgen?" },
+  { title: "Doelgroepen en doelen", helper: "Voor wie maak je deze prompt-run en wat moet hij concreet afdwingen?" },
   { title: "Repo-artifacts", helper: "Welke paden en categorieën onderbouwen de run?" },
   { title: "Lessons learned", helper: "Leg vast wat werkte, wat misging en wat structureel is veranderd." },
   { title: "Open vragen en scope notes", helper: "Welke ambiguities zijn er nog en welke scopekaders moeten zichtbaar blijven?" },
@@ -22,6 +23,8 @@ const lessonLabels: Array<{ label: LessonLabel; title: string }> = [
   { label: "misunderstanding", title: "Misunderstanding" },
   { label: "process_change", title: "Process change" }
 ];
+
+const providerProfiles = getProviderProfiles();
 
 function toMultiline(items: string[]) {
   return items.join("\n");
@@ -60,6 +63,20 @@ export function GeneratorForm() {
         label: item.label,
         summary: lessonMap.get(item.label) ?? ""
       }))
+    });
+  };
+
+  const toggleProvider = (provider: ProviderId) => {
+    const current = new Set(form.selectedProviders ?? []);
+    if (current.has(provider)) {
+      current.delete(provider);
+    } else {
+      current.add(provider);
+    }
+
+    updateForm({
+      ...form,
+      selectedProviders: providerProfiles.map((profile) => profile.id).filter((id) => current.has(id))
     });
   };
 
@@ -124,11 +141,28 @@ export function GeneratorForm() {
                 <Field label="Korte samenvatting" help="Vat de context compact samen; deze tekst voedt de generator.">
                   <textarea className="textarea" value={form.conversation_source.summary} onChange={(e) => updateForm({ ...form, conversation_source: { ...form.conversation_source, summary: e.target.value } })} />
                 </Field>
-                <Field label="Website-doel" help="Wat moet de uiteindelijke website of run concreet bereiken?">
+                <Field label="Website- of productdoel" help="Wat moet de uiteindelijke run concreet opleveren of afdwingen?">
                   <textarea className="textarea" value={form.project_context.website_goal} onChange={(e) => updateForm({ ...form, project_context: { ...form.project_context, website_goal: e.target.value } })} />
                 </Field>
                 <Field label="Tone of voice" help="Bijvoorbeeld warm, professioneel of technisch en direct.">
                   <input className="input" value={form.project_context.tone_of_voice} onChange={(e) => updateForm({ ...form, project_context: { ...form.project_context, tone_of_voice: e.target.value } })} />
+                </Field>
+                <Field label="Providerprofielen" help="Dezelfde run wordt vertaald naar directe prompts per geselecteerde AI-provider.">
+                  <div className="flex flex-wrap gap-3">
+                    {providerProfiles.map((profile) => {
+                      const active = (form.selectedProviders ?? []).includes(profile.id);
+                      return (
+                        <button
+                          key={profile.id}
+                          type="button"
+                          onClick={() => toggleProvider(profile.id)}
+                          className={`rounded-full px-4 py-2 text-sm font-semibold transition ${active ? "border border-teal/40 bg-teal/15 text-white" : "border border-white/10 bg-white/5 text-mist/75 hover:border-teal/40 hover:text-white"}`}
+                        >
+                          {profile.label}
+                        </button>
+                      );
+                    })}
+                  </div>
                 </Field>
               </>
             ) : null}
@@ -205,13 +239,13 @@ export function GeneratorForm() {
               <button type="button" onClick={parseAdvanced} className="rounded-full border border-teal/30 bg-teal/10 px-4 py-2 text-sm font-semibold text-white transition hover:bg-teal/20">
                 JSON valideren en syncen
               </button>
-              <div className="rounded-full border border-white/10 px-4 py-2 text-xs uppercase tracking-[0.22em] text-mist/60">Schema help: v3 inputcontract + semantische checks</div>
+              <div className="rounded-full border border-white/10 px-4 py-2 text-xs uppercase tracking-[0.22em] text-mist/60">Schema help: v4 inputcontract + providerprofielen</div>
             </div>
           </div>
         )}
 
         {messages.length > 0 ? <div className="mt-6 rounded-2xl border border-teal/30 bg-teal/10 p-4 text-sm text-mist/90">{messages.join(" ")}</div> : null}
-        {error ? <div className="mt-6 rounded-2xl border border-red-500/30 bg-red-500/10 p-4 text-sm text-red-100">{error}</div> : null}
+        {error ? <div className="mt-6 whitespace-pre-wrap rounded-2xl border border-red-500/30 bg-red-500/10 p-4 text-sm text-red-100">{error}</div> : null}
 
         <div className="mt-8 flex flex-wrap items-center justify-between gap-3 border-t border-white/10 pt-6">
           <div className="flex gap-2">
@@ -244,40 +278,51 @@ export function GeneratorForm() {
       <aside className="space-y-6">
         <div className="rounded-3xl border border-white/10 bg-white/5 p-5 shadow-glow">
           <p className="text-xs uppercase tracking-[0.22em] text-amber">Waarom vragen we dit?</p>
-          <p className="mt-3 text-sm leading-7 text-mist/80">De wizard vraagt alleen de input die de generator nodig heeft om context, lessons learned, quality gates en artifacts consistent op te bouwen.</p>
+          <p className="mt-3 text-sm leading-7 text-mist/80">De wizard vraagt alleen de input die de generator nodig heeft om context, lessons learned, quality gates en provider-specifieke promptvarianten consistent op te bouwen.</p>
         </div>
         <div className="rounded-3xl border border-white/10 bg-white/5 p-5 shadow-glow">
           <p className="text-xs uppercase tracking-[0.22em] text-teal">Wat komt eruit?</p>
           <ul className="mt-3 space-y-3 text-sm leading-7 text-mist/80">
-            <li>SUPER_PROMPT voor een nieuwe Codex-run</li>
-            <li>PROMPT_PLAYBOOK met rationale en patronen</li>
-            <li>Decision register voor structurele keuzes</li>
-            <li>JSONL eventlog en run-report voor controle</li>
+            <li>Base prompt als neutrale bron van waarheid</li>
+            <li>Direct inzetbare prompts voor OpenAI, Claude en Gemini</li>
+            <li>Playbook, decision register, eventlog en run-report</li>
+            <li>Traceerbare output die je kunt kopiëren of downloaden</li>
+          </ul>
+        </div>
+        <div className="rounded-3xl border border-white/10 bg-white/5 p-5 shadow-glow">
+          <p className="text-xs uppercase tracking-[0.22em] text-amber">Laatst geverifieerd</p>
+          <ul className="mt-3 space-y-2 text-sm leading-7 text-mist/80">
+            {providerProfiles.map((profile) => (
+              <li key={profile.id}>{profile.label}: {profile.profileVersion} · {profile.lastVerifiedAt}</li>
+            ))}
           </ul>
         </div>
       </aside>
       <style jsx>{`
         .input {
           width: 100%;
-          border-radius: 1.5rem;
-          border: 1px solid rgba(255,255,255,0.1);
-          background: rgba(11,16,26,0.7);
+          border-radius: 1.25rem;
+          border: 1px solid rgba(255, 255, 255, 0.1);
+          background: rgba(12, 18, 31, 0.7);
           padding: 0.9rem 1rem;
-          color: #f5f7fb;
+          color: #edf3ff;
           outline: none;
           transition: border-color 0.2s ease;
         }
-        .input:focus, .textarea:focus {
-          border-color: rgba(63,210,199,0.5);
+
+        .input:focus,
+        .textarea:focus {
+          border-color: rgba(48, 204, 200, 0.45);
         }
+
         .textarea {
-          min-height: 10rem;
+          min-height: 11rem;
           width: 100%;
           border-radius: 1.5rem;
-          border: 1px solid rgba(255,255,255,0.1);
-          background: rgba(11,16,26,0.7);
+          border: 1px solid rgba(255, 255, 255, 0.1);
+          background: rgba(12, 18, 31, 0.7);
           padding: 1rem;
-          color: #f5f7fb;
+          color: #edf3ff;
           outline: none;
           transition: border-color 0.2s ease;
         }
@@ -290,8 +335,8 @@ function Field({ label, help, children }: { label: string; help: string; childre
   return (
     <label className="block space-y-2">
       <div>
-        <div className="text-sm font-semibold text-white">{label}</div>
-        <p className="text-sm leading-6 text-mist/60">{help}</p>
+        <p className="text-sm font-semibold text-white">{label}</p>
+        <p className="mt-1 text-sm leading-6 text-mist/65">{help}</p>
       </div>
       {children}
     </label>

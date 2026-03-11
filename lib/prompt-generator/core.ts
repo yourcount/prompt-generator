@@ -1,4 +1,17 @@
-import type { ArtifactKey, DiffItem, GeneratedArtifacts, PromptRunInput, PromptRunResult } from "@/lib/prompt-generator/types";
+import crypto from "node:crypto";
+
+import { getProviderProfile, getProviderProfiles } from "@/lib/prompt-generator/providers";
+import type {
+  DiffItem,
+  DownloadArtifactKey,
+  GeneratedArtifacts,
+  PromptRunInput,
+  PromptRunResult,
+  ProviderId,
+  ProviderProfile,
+  ProviderPromptMap,
+  SharedArtifactKey
+} from "@/lib/prompt-generator/types";
 
 const ROOT_KEYS = [
   "conversation_source",
@@ -10,6 +23,7 @@ const ROOT_KEYS = [
 ] as const;
 
 const LESSON_LABELS = ["success", "regression", "misunderstanding", "process_change"] as const;
+const DEFAULT_PROVIDERS: ProviderId[] = ["openai", "claude", "gemini"];
 
 const EVENT_CONFIDENCE: Record<string, number> = {
   context_extracted: 0.95,
@@ -30,6 +44,7 @@ export type GeneratePromptRunOptions = {
   currentArtifacts?: Partial<GeneratedArtifacts> | null;
   runId: string;
   createdAt?: string;
+  selectedProviders?: ProviderId[];
 };
 
 function isPlainObject(value: unknown): value is Record<string, unknown> {
@@ -42,6 +57,15 @@ function normalizeString(value: unknown): string {
 
 function isNonEmptyString(value: unknown): value is string {
   return typeof value === "string" && value.trim().length > 0;
+}
+
+function normalizeProvider(value: unknown): ProviderId | null {
+  if (value === "openai" || value === "claude" || value === "gemini") return value;
+  return null;
+}
+
+function dedupeProviders(values: ProviderId[]) {
+  return values.filter((value, index) => values.indexOf(value) === index);
 }
 
 function renderBulletList(items: string[], emptyPlaceholder: string) {
@@ -85,12 +109,14 @@ function renderScopeNotes(items: string[]) {
   return items.length ? `\n## Scope Notes\n\n${renderBulletList(items, "[Aanvullen: scope note]")}\n` : "";
 }
 
-function renderAssumptions(input: PromptRunInput) {
+function renderAssumptions(input: PromptRunInput, selectedProviders: ProviderId[]) {
   const assumptions = [
     `Frameworkversie: ${input.run_metadata.framework_version}`,
     `Templateversie: ${input.run_metadata.template_version}`,
     `Outputtaal: ${input.run_metadata.output_language}`,
-    "Generator werkt als scaffold + merge en verzint geen projectspecifieke inhoud."
+    `Actieve providerprofielen: ${selectedProviders.join(", ")}`,
+    "Generator werkt als scaffold + merge en verzint geen projectspecifieke inhoud.",
+    "Providerprofielen zijn versioned in code en handmatig geverifieerd tegen officiële documentatie."
   ];
 
   if (input.open_questions.length > 0) {
@@ -126,7 +152,35 @@ function timestampToken(date = new Date()) {
 }
 
 export function createRunId(sourceProject: string, date = new Date()) {
-  return `${timestampToken(date)}-${slugify(sourceProject)}`;
+  return `${timestampToken(date)}-${slugify(sourceProject)}-${crypto.randomUUID().slice(0, 8)}`;
+}
+
+export function inferSelectedProviders(artifacts: Partial<GeneratedArtifacts> | null | undefined): ProviderId[] {
+  const providers: ProviderId[] = [];
+  if (artifacts?.providerPrompts?.openai) providers.push("openai");
+  if (artifacts?.providerPrompts?.claude) providers.push("claude");
+  if (artifacts?.providerPrompts?.gemini) providers.push("gemini");
+  return providers.length ? providers : [...DEFAULT_PROVIDERS];
+}
+
+export function normalizeGeneratedArtifacts(raw: unknown): GeneratedArtifacts {
+  const value = isPlainObject(raw) ? raw : {};
+  const providerPromptsValue = isPlainObject(value.providerPrompts) ? value.providerPrompts : {};
+  const basePrompt = normalizeString(value.basePrompt) || normalizeString(value.superPrompt);
+
+  return {
+    basePrompt,
+    playbook: normalizeString(value.playbook),
+    decisionRegister: normalizeString(value.decisionRegister),
+    promptEvents: normalizeString(value.promptEvents),
+    runReport: normalizeString(value.runReport),
+    providerPrompts: {
+      openai: normalizeString(providerPromptsValue.openai),
+      claude: normalizeString(providerPromptsValue.claude),
+      gemini: normalizeString(providerPromptsValue.gemini)
+    },
+    legacySuperPrompt: normalizeString(value.superPrompt) || basePrompt
+  };
 }
 
 export function normalizeRunInput(raw: unknown): PromptRunInput {
@@ -136,6 +190,7 @@ export function normalizeRunInput(raw: unknown): PromptRunInput {
   const repoArtifacts = isPlainObject(value.repo_artifacts) ? value.repo_artifacts : {};
   const runMetadata = isPlainObject(value.run_metadata) ? value.run_metadata : {};
   const lessonsLearned = Array.isArray(value.lessons_learned) ? value.lessons_learned : [];
+  const selectedProviders = Array.isArray(value.selectedProviders) ? value.selectedProviders.map(normalizeProvider).filter(Boolean) as ProviderId[] : [];
 
   return {
     conversation_source: {
@@ -172,7 +227,8 @@ export function normalizeRunInput(raw: unknown): PromptRunInput {
       template_version: normalizeString(runMetadata.template_version)
     },
     success_criteria: Array.isArray(value.success_criteria) ? value.success_criteria.map(normalizeString).filter(Boolean) : [],
-    scope_notes: Array.isArray(value.scope_notes) ? value.scope_notes.map(normalizeString).filter(Boolean) : []
+    scope_notes: Array.isArray(value.scope_notes) ? value.scope_notes.map(normalizeString).filter(Boolean) : [],
+    selectedProviders: dedupeProviders(selectedProviders.length ? selectedProviders : [...DEFAULT_PROVIDERS])
   };
 }
 
@@ -197,8 +253,8 @@ export function validateRunInput(input: PromptRunInput): ValidationSummary {
   if (!input.run_metadata.source_project) blockingIssues.push("run_metadata.source_project ontbreekt");
   if (!input.run_metadata.framework_version) blockingIssues.push("run_metadata.framework_version ontbreekt");
   if (!input.run_metadata.template_version) blockingIssues.push("run_metadata.template_version ontbreekt");
-  if (input.run_metadata.framework_version && input.run_metadata.framework_version !== "v3") {
-    blockingIssues.push("run_metadata.framework_version moet v3 zijn");
+  if (input.run_metadata.framework_version && input.run_metadata.framework_version !== "v4") {
+    blockingIssues.push("run_metadata.framework_version moet v4 zijn");
   }
 
   if (input.lessons_learned.length < 3) {
@@ -215,6 +271,10 @@ export function validateRunInput(input: PromptRunInput): ValidationSummary {
 
   if (input.repo_artifacts.paths.length < 1 && input.repo_artifacts.categories.length < 1) {
     blockingIssues.push("repo_artifacts moet minimaal 1 path of categorie bevatten");
+  }
+
+  if ((input.selectedProviders ?? []).length < 1) {
+    blockingIssues.push("selectedProviders moet minimaal 1 provider bevatten");
   }
 
   if (input.success_criteria.length === 0) {
@@ -235,16 +295,16 @@ export function validateRunInput(input: PromptRunInput): ValidationSummary {
   return { blockingIssues, warnings };
 }
 
-function renderSuperPrompt(input: PromptRunInput) {
+function renderBasePrompt(input: PromptRunInput, selectedProviders: ProviderId[]) {
   const statusBlock = input.open_questions.length > 0
     ? `## Status\n\nDeze run is nog niet \`plan_complete\`.\n\nReden:\n${renderBulletList(input.open_questions, "[Aanvullen: open ambiguity]")}\n\nLos deze high-impact ambiguities eerst op voordat deze output als definitief wordt gebruikt.`
     : "## Plan complete\n\nDeze run heeft geen open high-impact ambiguities en mag als `plan_complete` worden behandeld.";
 
-  return `# Super Prompt ${input.run_metadata.framework_version} voor ${input.project_context.brand}
+  return `# Base Prompt ${input.run_metadata.framework_version} voor ${input.project_context.brand}
 
 ## Doel
 
-Je bent een Codex-only website delivery system voor ${input.project_context.brand}. Je doel is om een websiteproject iteratief, repo-gedekt en zonder hallucinaties uit te voeren.
+Je bent een provider-agnostisch AI delivery system voor ${input.project_context.brand}. Je doel is om een website- of producttraject iteratief, evidence-based en zonder hallucinaties uit te voeren.
 
 Projectdoel:
 
@@ -257,6 +317,10 @@ ${renderSuccessCriteria(input.success_criteria, input.project_context.brand)}
 Feature scope voor deze run:
 
 ${renderBulletList(input.project_context.features, "[Aanvullen: feature focus]")}
+
+Actieve providerprofielen:
+
+${renderBulletList(selectedProviders.map((provider) => getProviderProfile(provider).label), "[Aanvullen: provider]")}
 
 ## Stopregel
 
@@ -276,6 +340,7 @@ ${renderBulletList(input.project_context.audiences, "[Aanvullen: doelgroep]")}
 
 - Werk altijd aan precies een feature, bugcluster of subsystem per iteratie
 - Lever per iteratie concrete output: code, docs of validatie
+- Gebruik gedeelde artifacts als bron van waarheid voor alle providerprompts
 
 Huidige trajectscope:
 
@@ -341,12 +406,7 @@ ${renderScopeNotes(input.scope_notes)}## Workers
 
 ## Outputformaten
 
-Schrijf exact deze vier outputs:
-
-- \`docs/prompt-framework/output/SUPER_PROMPT.md\`
-- \`docs/prompt-framework/output/PROMPT_PLAYBOOK.md\`
-- \`docs/prompt-framework/output/logs/prompt-events.jsonl\`
-- \`docs/prompt-framework/output/logs/decision-register.md\`
+Schrijf gedeelde artifacts en providerprompts zodanig dat ze direct herbruikbaar zijn in andere AI-workflows.
 
 ## Validatiegates
 
@@ -386,18 +446,65 @@ ${renderBulletList(input.repo_artifacts.categories, "[Aanvullen: artifactcategor
 
 ## Aannames
 
-${renderAssumptions(input)}
+${renderAssumptions(input, selectedProviders)}
 
 ${statusBlock}
 `;
 }
 
-function renderPlaybook(input: PromptRunInput) {
+function renderProviderPrompt(input: PromptRunInput, basePrompt: string, profile: ProviderProfile) {
+  return `# ${profile.label} Prompt voor ${input.project_context.brand}
+
+Gebruik dit als direct inzetbare prompt voor ${profile.label}. Laat de AI deze structuur volgen en behoud de markdownkoppen.
+
+## Providerprofiel
+
+- Profielversie: ${profile.profileVersion}
+- Aanbevolen modelfamilie: ${profile.recommendedModelFamily}
+- Laatst geverifieerd: ${profile.lastVerifiedAt}
+
+### Best-practice samenvatting
+${renderBulletList(profile.bestPracticeSummary, "[Aanvullen: best practice]")}
+
+### Constructieregels
+${renderBulletList(profile.promptConstructionRules, "[Aanvullen: rule]")}
+
+### Output hints
+${renderBulletList(profile.outputHints, "[Aanvullen: output hint]")}
+
+### Officiële bronnen
+${profile.sourceReferences.map((reference) => `- [${reference.label}](${reference.url})`).join("\n")}
+
+## Direct inzetbare prompt
+
+Je werkt met ${profile.label}. Volg onderstaande instructies strikt.
+
+1. Lees eerst de volledige context.
+2. Sluit context- en plangates voordat je uitvoert.
+3. Maak aannames expliciet zichtbaar.
+4. Lever output exact volgens de gevraagde structuur.
+5. Gebruik alleen evidence-based claims of gelabelde aannames.
+
+### Extra providerinstructies
+${renderBulletList(profile.promptConstructionRules, "[Aanvullen: provider instructie]")}
+
+### Basisspecificatie
+
+${basePrompt}
+`;
+}
+
+function renderPlaybook(input: PromptRunInput, selectedProviders: ProviderId[]) {
+  const providerLines = selectedProviders.map((provider) => {
+    const profile = getProviderProfile(provider);
+    return `| ${profile.label} | ${profile.profileVersion} | ${profile.recommendedModelFamily} | ${profile.lastVerifiedAt} |`;
+  }).join("\n");
+
   return `# Prompt Playbook ${input.run_metadata.framework_version}
 
 ## Doel van deze versie
 
-Deze versie scaffoldt een herhaalbare superprompt voor ${input.project_context.brand} op basis van een JSON-runbestand. De generator automatiseert structuur, logging en vaste secties, maar laat projectspecifieke verfijning expliciet zichtbaar.
+Deze versie scaffoldt een herhaalbare prompt-run voor ${input.project_context.brand} op basis van een JSON-runbestand. De generator automatiseert structuur, logging en vaste secties, maar laat projectspecifieke verfijning expliciet zichtbaar.
 
 Projectdoel:
 
@@ -410,7 +517,14 @@ Projectdoel:
 | Inputformaat | JSON met formeel contract | Eenvoudig te valideren en scriptbaar |
 | Automatisering | Scaffold + merge | Houdt output bruikbaar zonder inhoud te verzinnen |
 | Outputlocaties | Vast en toegankelijk | Maakt tooling, review en downloads consistent |
+| Providerlaag | Base prompt + providerprofielen | Houdt één bron van waarheid en directe AI-inzet per provider |
 | Snapshot-history | Per-run snapshot naast current output | Verbetert traceability en rollback |
+
+## Providerprofielen
+
+| Provider | Profielversie | Aanbevolen familie | Laatst geverifieerd |
+| --- | --- | --- | --- |
+${providerLines}
 
 ## Lessons learned
 
@@ -423,9 +537,10 @@ ${renderBulletList(input.lessons_learned.map((lesson) => lesson.summary), "[Aanv
 ## Herbruikbare promptpatronen
 
 - Eerst context, dan plan, dan uitvoering
-- 1 feature per iteratie
+- 1 feature of besliscluster per iteratie
 - Gates zijn hard blockers
 - Geen stille aannames
+- Provider-specifieke promptvorm komt uit versioned profielen, niet uit vrije interpretatie
 
 ## Anti-patronen
 
@@ -433,14 +548,16 @@ ${renderBulletList(input.lessons_learned.map((lesson) => lesson.summary), "[Aanv
 - Repo-feiten aannemen zonder bewijs
 - Open high-impact ambiguities negeren
 - Output buiten vaste artifactpaden schrijven
+- Provider-specifieke nuances verstoppen in generieke copy
 
 ## Updateprotocol
 
 1. Werk het JSON-runbestand bij.
-2. Draai de generator opnieuw.
-3. Vergelijk current output en diff-samenvatting.
-4. Beoordeel warnings en blocking issues in het run-report.
-5. Bewaar snapshot-history als audit trail.
+2. Herzie providerprofielen alleen op basis van officiële documentatie of aantoonbare regressies.
+3. Draai de generator opnieuw.
+4. Vergelijk current output en diff-samenvatting.
+5. Beoordeel warnings en blocking issues in het run-report.
+6. Bewaar snapshot-history als audit trail.
 `;
 }
 
@@ -449,6 +566,7 @@ function renderDecisionRegister(input: PromptRunInput) {
     "Inputformaat is JSON met formeel schema en semantische checks.",
     "Automation mode is scaffold + merge.",
     "Current output blijft leidend naast immutable snapshots.",
+    "Prompt-output wordt opgesplitst in base prompt en provider-specifieke promptvarianten.",
     input.open_questions.length > 0
       ? "Run blijft geblokkeerd totdat open high-impact ambiguities zijn opgelost."
       : "Run heeft geen open high-impact ambiguities en mag plan_complete zijn."
@@ -466,29 +584,34 @@ ${decisions
 `;
 }
 
+function compareText(current: string | undefined, next: string) {
+  return current == null ? "created" : current === next ? "unchanged" : "changed";
+}
+
 function buildDiffSummary(artifacts: GeneratedArtifacts, currentArtifacts?: Partial<GeneratedArtifacts> | null): DiffItem[] {
-  return [
-    ["SUPER_PROMPT.md", "superPrompt"],
-    ["PROMPT_PLAYBOOK.md", "playbook"],
-    ["decision-register.md", "decisionRegister"],
-    ["prompt-events.jsonl", "promptEvents"],
-    ["run-report.md", "runReport"]
-  ].map(([label, key]) => {
-    const typedKey = key as ArtifactKey;
-    const current = currentArtifacts?.[typedKey];
-    const next = artifacts[typedKey];
-    return {
-      label,
-      status: current == null ? "created" : current === next ? "unchanged" : "changed"
-    };
-  });
+  const items: DiffItem[] = [
+    { label: "BASE_PROMPT.md", status: compareText(currentArtifacts?.basePrompt, artifacts.basePrompt) },
+    { label: "PROMPT_PLAYBOOK.md", status: compareText(currentArtifacts?.playbook, artifacts.playbook) },
+    { label: "decision-register.md", status: compareText(currentArtifacts?.decisionRegister, artifacts.decisionRegister) },
+    { label: "prompt-events.jsonl", status: compareText(currentArtifacts?.promptEvents, artifacts.promptEvents) },
+    { label: "run-report.md", status: compareText(currentArtifacts?.runReport, artifacts.runReport) }
+  ];
+
+  for (const profile of getProviderProfiles()) {
+    const current = currentArtifacts?.providerPrompts?.[profile.id];
+    const next = artifacts.providerPrompts[profile.id];
+    if (!current && !next) continue;
+    items.push({ label: `${profile.label.toUpperCase()}_PROMPT.md`, status: next ? compareText(current, next) : "unchanged" });
+  }
+
+  return items;
 }
 
 function summarizeDiff(diffSummary: DiffItem[]) {
   return diffSummary.map((item) => `- ${item.label}: ${item.status}`).join("\n");
 }
 
-function renderPromptEvents(input: PromptRunInput, result: Pick<PromptRunResult, "qualityScore">) {
+function renderPromptEvents(input: PromptRunInput, result: Pick<PromptRunResult, "qualityScore">, selectedProviders: ProviderId[]) {
   const baseTime = new Date(`${input.run_metadata.date}T10:00:00Z`).getTime();
   const stamps = Array.from({ length: 5 }, (_, index) => new Date(baseTime + index * 60_000).toISOString());
 
@@ -497,21 +620,21 @@ function renderPromptEvents(input: PromptRunInput, result: Pick<PromptRunResult,
       worker: "Conversation Analyst",
       event_type: "context_extracted",
       summary: `Runcontext voor ${input.run_metadata.source_project} uit JSON-input en repo-artifacts samengevoegd.`,
-      artifact_ref: "SUPER_PROMPT.md",
+      artifact_ref: "BASE_PROMPT.md",
       timestamp: stamps[0]
     },
     {
       worker: "Prompt Best-Practices Researcher",
       event_type: "decision_made",
-      summary: "Promptregels, gates en outputcontract zijn afgeleid uit de gedeelde generatorcore.",
-      artifact_ref: "PROMPT_PLAYBOOK.md",
+      summary: `Providerprofielen toegepast voor ${selectedProviders.join(", ")}.`,
+      artifact_ref: "BASE_PROMPT.md",
       timestamp: stamps[1]
     },
     {
       worker: "Website Delivery Architect",
       event_type: "decision_made",
-      summary: "Artifacts zijn opnieuw opgebouwd met diff, report en snapshot-geschikte output.",
-      artifact_ref: "decision-register.md",
+      summary: "Artifacts zijn opnieuw opgebouwd met gedeelde basis en provider-specifieke promptvarianten.",
+      artifact_ref: "PROMPT_PLAYBOOK.md",
       timestamp: stamps[2]
     },
     {
@@ -538,7 +661,7 @@ function renderPromptEvents(input: PromptRunInput, result: Pick<PromptRunResult,
       worker: "QA & Risk Reviewer",
       event_type: "risk_flagged",
       summary: `Open ambiguities blokkeren plan_complete: ${input.open_questions.length} item(s).`,
-      artifact_ref: "SUPER_PROMPT.md",
+      artifact_ref: "BASE_PROMPT.md",
       timestamp: new Date(baseTime + 150_000).toISOString()
     });
   }
@@ -555,13 +678,16 @@ function renderPromptEvents(input: PromptRunInput, result: Pick<PromptRunResult,
 
 function renderRunReport(
   input: PromptRunInput,
-  result: Pick<PromptRunResult, "qualityScore" | "validationResult" | "warnings" | "blockingIssues" | "artifacts" | "diffSummary">
+  result: Pick<PromptRunResult, "qualityScore" | "validationResult" | "warnings" | "blockingIssues" | "artifacts" | "diffSummary" | "selectedProviders">
 ) {
+  const selectedProviders = result.selectedProviders ?? inferSelectedProviders(result.artifacts);
+  const providerPlaceholderCount = Object.values(result.artifacts.providerPrompts).reduce((sum, artifact) => sum + (artifact ? countPlaceholders(artifact) : 0), 0);
   const placeholderCounts = {
-    superPrompt: countPlaceholders(result.artifacts.superPrompt),
+    basePrompt: countPlaceholders(result.artifacts.basePrompt),
     playbook: countPlaceholders(result.artifacts.playbook),
     decisionRegister: countPlaceholders(result.artifacts.decisionRegister),
-    promptEvents: countPlaceholders(result.artifacts.promptEvents)
+    promptEvents: countPlaceholders(result.artifacts.promptEvents),
+    providerPrompts: providerPlaceholderCount
   };
 
   return `# Run Report
@@ -573,6 +699,7 @@ function renderRunReport(
 - Source project: ${input.run_metadata.source_project}
 - Framework version: ${input.run_metadata.framework_version}
 - Template version: ${input.run_metadata.template_version}
+- Providers: ${selectedProviders.join(", ")}
 
 ## Validation result
 
@@ -589,10 +716,15 @@ ${renderBulletList(result.warnings, "Geen warnings.")}
 
 ## Placeholder count per artifact
 
-- SUPER_PROMPT.md: ${placeholderCounts.superPrompt}
+- BASE_PROMPT.md: ${placeholderCounts.basePrompt}
 - PROMPT_PLAYBOOK.md: ${placeholderCounts.playbook}
 - decision-register.md: ${placeholderCounts.decisionRegister}
 - prompt-events.jsonl: ${placeholderCounts.promptEvents}
+- provider prompts: ${placeholderCounts.providerPrompts}
+
+## Open ambiguities
+
+- ${input.open_questions.length}
 
 ## Current-versus-previous summary
 
@@ -600,20 +732,62 @@ ${summarizeDiff(result.diffSummary)}
 `;
 }
 
+export function getDownloadArtifactContent(artifacts: GeneratedArtifacts, type: DownloadArtifactKey): string | null {
+  switch (type) {
+    case "basePrompt":
+      return artifacts.basePrompt;
+    case "playbook":
+      return artifacts.playbook;
+    case "decisionRegister":
+      return artifacts.decisionRegister;
+    case "promptEvents":
+      return artifacts.promptEvents;
+    case "runReport":
+      return artifacts.runReport;
+    case "superPrompt":
+      return artifacts.legacySuperPrompt ?? artifacts.basePrompt;
+    case "provider-openai":
+      return artifacts.providerPrompts.openai ?? null;
+    case "provider-claude":
+      return artifacts.providerPrompts.claude ?? null;
+    case "provider-gemini":
+      return artifacts.providerPrompts.gemini ?? null;
+    default:
+      return null;
+  }
+}
+
 export function generatePromptRun(rawInput: unknown, options: GeneratePromptRunOptions): PromptRunResult {
   const input = normalizeRunInput(rawInput);
+  const selectedProviders = dedupeProviders(options.selectedProviders ?? input.selectedProviders ?? [...DEFAULT_PROVIDERS]);
+  input.selectedProviders = selectedProviders;
+
   const { blockingIssues, warnings: initialWarnings } = validateRunInput(input);
+  const basePrompt = renderBasePrompt(input, selectedProviders);
+
+  const providerPrompts: ProviderPromptMap = {};
+  for (const provider of selectedProviders) {
+    providerPrompts[provider] = renderProviderPrompt(input, basePrompt, getProviderProfile(provider));
+  }
 
   const baseArtifacts: GeneratedArtifacts = {
-    superPrompt: renderSuperPrompt(input),
-    playbook: renderPlaybook(input),
+    basePrompt,
+    playbook: renderPlaybook(input, selectedProviders),
     decisionRegister: renderDecisionRegister(input),
     promptEvents: "",
-    runReport: ""
+    runReport: "",
+    providerPrompts,
+    legacySuperPrompt: basePrompt
   };
 
   const warnings = [...initialWarnings];
-  const placeholderCount = countPlaceholders(baseArtifacts.superPrompt) + countPlaceholders(baseArtifacts.playbook) + countPlaceholders(baseArtifacts.decisionRegister);
+  const placeholderCount = [
+    baseArtifacts.basePrompt,
+    baseArtifacts.playbook,
+    baseArtifacts.decisionRegister,
+    ...Object.values(baseArtifacts.providerPrompts)
+  ].reduce((sum, artifact) => sum + (artifact ? countPlaceholders(artifact) : 0), 0);
+
   if (placeholderCount > 0) {
     warnings.push(`Artifacts bevatten ${placeholderCount} placeholder(s).`);
   }
@@ -624,20 +798,17 @@ export function generatePromptRun(rawInput: unknown, options: GeneratePromptRunO
   const validationResult: PromptRunResult["validationResult"] = blockingIssues.length > 0 ? "blocking_fail" : warnings.length > 0 ? "valid_with_warnings" : "valid";
   const qualityScore: PromptRunResult["qualityScore"] = blockingIssues.length > 0 ? "fail" : warnings.length > 0 ? "warn" : "pass";
 
-  baseArtifacts.promptEvents = renderPromptEvents(input, { qualityScore });
-
+  baseArtifacts.promptEvents = renderPromptEvents(input, { qualityScore }, selectedProviders);
   const diffSummary = buildDiffSummary(baseArtifacts, options.currentArtifacts);
 
-  const partialResult: Pick<
-    PromptRunResult,
-    "qualityScore" | "validationResult" | "warnings" | "blockingIssues" | "artifacts" | "diffSummary"
-  > = {
+  const partialResult: Pick<PromptRunResult, "qualityScore" | "validationResult" | "warnings" | "blockingIssues" | "artifacts" | "diffSummary" | "selectedProviders"> = {
     qualityScore,
     validationResult,
     warnings,
     blockingIssues,
     artifacts: baseArtifacts,
-    diffSummary
+    diffSummary,
+    selectedProviders
   };
 
   baseArtifacts.runReport = renderRunReport(input, partialResult);
@@ -650,6 +821,7 @@ export function generatePromptRun(rawInput: unknown, options: GeneratePromptRunO
     artifacts: baseArtifacts,
     diffSummary: buildDiffSummary(baseArtifacts, options.currentArtifacts),
     snapshotRef: options.runId,
-    createdAt: options.createdAt ?? new Date().toISOString()
+    createdAt: options.createdAt ?? new Date().toISOString(),
+    selectedProviders
   };
 }

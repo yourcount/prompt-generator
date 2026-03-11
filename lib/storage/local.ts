@@ -1,6 +1,7 @@
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 
+import { getDownloadArtifactContent, inferSelectedProviders, normalizeGeneratedArtifacts } from "@/lib/prompt-generator/core";
 import type { GeneratedArtifacts, RunSummary, StoredRun } from "@/lib/prompt-generator/types";
 import type { StorageAdapter } from "@/lib/storage/types";
 
@@ -29,20 +30,31 @@ async function writeText(filePath: string, value: string) {
   await writeFile(filePath, value, "utf8");
 }
 
+async function writeArtifacts(runDir: string, artifacts: GeneratedArtifacts) {
+  await Promise.all([
+    writeText(path.join(runDir, "basePrompt.md"), artifacts.basePrompt),
+    writeText(path.join(runDir, "playbook.md"), artifacts.playbook),
+    writeText(path.join(runDir, "decisionRegister.md"), artifacts.decisionRegister),
+    writeText(path.join(runDir, "promptEvents.md"), artifacts.promptEvents),
+    writeText(path.join(runDir, "runReport.md"), artifacts.runReport),
+    writeText(path.join(runDir, "provider-openai.md"), artifacts.providerPrompts.openai ?? ""),
+    writeText(path.join(runDir, "provider-claude.md"), artifacts.providerPrompts.claude ?? ""),
+    writeText(path.join(runDir, "provider-gemini.md"), artifacts.providerPrompts.gemini ?? "")
+  ]);
+}
+
 export function createLocalStorage(): StorageAdapter {
   return {
     async readCurrentArtifacts() {
-      return readJson<GeneratedArtifacts>(path.join(CURRENT_DIR, "artifacts.json"));
+      const stored = await readJson<GeneratedArtifacts>(path.join(CURRENT_DIR, "artifacts.json"));
+      return stored ? normalizeGeneratedArtifacts(stored) : null;
     },
     async saveRun(run) {
       const runDir = path.join(RUNS_DIR, run.id);
       await writeJson(path.join(runDir, "run.json"), run);
       await writeJson(path.join(runDir, "input.json"), run.input);
       await writeJson(path.join(CURRENT_DIR, "artifacts.json"), run.artifacts);
-
-      await Promise.all(
-        Object.entries(run.artifacts).map(([key, value]) => writeText(path.join(runDir, `${key}.md`), value))
-      );
+      await writeArtifacts(runDir, run.artifacts);
 
       const currentIndex = (await readJson<RunSummary[]>(INDEX_FILE)) ?? [];
       const summary: RunSummary = {
@@ -51,20 +63,25 @@ export function createLocalStorage(): StorageAdapter {
         brand: run.input.project_context.brand,
         sourceProject: run.input.run_metadata.source_project,
         qualityScore: run.qualityScore,
-        validationResult: run.validationResult
+        validationResult: run.validationResult,
+        selectedProviders: run.selectedProviders
       };
       const nextIndex = [summary, ...currentIndex.filter((item) => item.id !== run.id)].slice(0, 20);
       await writeJson(INDEX_FILE, nextIndex);
     },
     async getRun(id) {
-      return readJson<StoredRun>(path.join(RUNS_DIR, id, "run.json"));
+      const run = await readJson<StoredRun>(path.join(RUNS_DIR, id, "run.json"));
+      if (!run) return null;
+      return {
+        ...run,
+        artifacts: normalizeGeneratedArtifacts(run.artifacts),
+        selectedProviders: run.selectedProviders ?? inferSelectedProviders(run.artifacts)
+      };
     },
     async getArtifact(id, type) {
-      try {
-        return await readFile(path.join(RUNS_DIR, id, `${type}.md`), "utf8");
-      } catch {
-        return null;
-      }
+      const run = await readJson<StoredRun>(path.join(RUNS_DIR, id, "run.json"));
+      if (!run) return null;
+      return getDownloadArtifactContent(run.artifacts, type);
     },
     async listRuns(limit = 10) {
       const items = (await readJson<RunSummary[]>(INDEX_FILE)) ?? [];

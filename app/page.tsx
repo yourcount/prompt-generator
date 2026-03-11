@@ -1,6 +1,7 @@
 import Link from "next/link";
 
 import { ExampleCards } from "@/components/example-cards";
+import { ProviderProfileCards } from "@/components/provider-profile-cards";
 import { SectionShell } from "@/components/section-shell";
 import { WorkflowVisual } from "@/components/workflow-visual";
 
@@ -11,10 +12,10 @@ export default function HomePage() {
         <div className="rounded-[2rem] border border-white/10 bg-white/5 p-8 shadow-glow sm:p-10">
           <p className="text-xs uppercase tracking-[0.35em] text-teal">Prompt Generator Web App</p>
           <h1 className="mt-4 max-w-4xl font-serif text-5xl leading-tight text-white sm:text-6xl">
-            Maak van ruwe projectlessons een bruikbare superprompt.
+            Maak van projectcontext direct inzetbare prompts voor OpenAI, Claude en Gemini.
           </h1>
           <p className="mt-5 max-w-3xl text-lg leading-8 text-mist/80">
-            Prompt Foundry combineert uitleg, validatie, quality gates en directe artifact-output in één publieke workflow. Geen losse markdowns of terminalstappen meer voor de eerste run.
+            Prompt Foundry combineert uitleg, validatie, quality gates en directe artifact-output in één publieke workflow. Eén base prompt blijft de bron van waarheid; providerprofielen vertalen die naar bruikbare varianten voor verschillende AI-assistenten.
           </p>
           <div className="mt-8 flex flex-wrap gap-3">
             <Link href="/generator" className="rounded-full bg-amber px-5 py-3 text-sm font-bold text-ink transition hover:bg-[#ffbb6d]">
@@ -29,15 +30,19 @@ export default function HomePage() {
           <p className="text-xs uppercase tracking-[0.24em] text-amber">Waarom dit bestaat</p>
           <ul className="mt-5 space-y-4 text-sm leading-7 text-mist/80">
             <li>Gebruiksvriendelijke wizard voor gemengde doelgroepen.</li>
-            <li>Directe outputtabs voor prompt, playbook, logs en report.</li>
+            <li>Provider-specifieke prompttabs zonder losse handmatige herschrijvingen.</li>
             <li>Vercel-ready opslag met dev/local fallback.</li>
             <li>Voorbeelden en uitleg zodat nieuwe users meteen snappen wat de generator doet.</li>
           </ul>
         </div>
       </section>
 
-      <SectionShell eyebrow="Input → gates → output" title="Hoe de flow werkt" intro="De webapp laat dezelfde generator-core draaien als de CLI, maar zet die om naar een begeleide flow met directe zichtbaarheid van warnings, blokkades en artifacts.">
+      <SectionShell eyebrow="Input → gates → output" title="Hoe de flow werkt" intro="De webapp laat dezelfde generator-core draaien als de CLI, maar zet die om naar een begeleide flow met directe zichtbaarheid van warnings, blokkades, providerprofielen en artifacts.">
         <WorkflowVisual />
+      </SectionShell>
+
+      <SectionShell eyebrow="Providerprofielen" title="Versioned best practices in code" intro="De generator haalt geen live prompttips op. OpenAI, Claude en Gemini krijgen vaste, handmatig onderhouden profielen die zichtbaar zijn in de UI en op vaste momenten opnieuw worden geverifieerd.">
+        <ProviderProfileCards />
       </SectionShell>
 
       <SectionShell eyebrow="Voorbeelden" title="Start met een bekend patroon" intro="De generator blijft generiek. Deze voorbeelden laten zien hoe de input eruitziet en waarom verschillende cases andere lessons learned opleveren.">

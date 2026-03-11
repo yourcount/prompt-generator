@@ -1,7 +1,7 @@
 const steps = [
-  { label: "Input", detail: "Projectcontext, repo-artifacts en lessons learned" },
+  { label: "Input", detail: "Projectcontext, repo-artifacts, lessons learned en providerkeuze" },
   { label: "Gates", detail: "Validatie, warnings en blocking issues" },
-  { label: "Artifacts", detail: "Super prompt, playbook, logs en report" },
+  { label: "Artifacts", detail: "Base prompt, providerprompts, playbook en report" },
   { label: "Snapshot", detail: "Bewaarbare run die later terug te lezen is" }
 ];
 

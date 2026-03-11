@@ -1,6 +1,6 @@
 # Prompt Foundry
 
-Publieke Next.js webapp voor de v3 superprompt generator. De site maakt de generator bruikbaar zonder terminal: met uitleg, een wizard, advanced JSON-invoer, directe artifactweergave en downloadbare output.
+Publieke Next.js webapp voor een provider-agnostische prompt generator. De site maakt de generator bruikbaar zonder terminal: met uitleg, een wizard, advanced JSON-invoer, directe artifactweergave en downloadbare output voor OpenAI, Claude en Gemini.
 
 ## Stack
 
@@ -19,7 +19,8 @@ npm install
 npm run dev
 npm run build
 npm run lint
-npm run prompt:generate -- --input examples/prompt-foundry-webapp.json
+npm run prompt:generate -- --input examples/generic-starter.json
+npm run prompt:generate -- --input examples/generic-starter.json --providers openai,claude
 ```
 
 ## Opslag
@@ -36,7 +37,7 @@ Set minimaal:
 BLOB_READ_WRITE_TOKEN=...
 ```
 
-De huidige Blob-adapter schrijft met `access: "public"`. Gebruik dus een Blob-setup die publieke objecten toelaat, of pas de adapter aan als je private blobs met server-side reads wilt gebruiken.
+De Blob-adapter gebruikt publieke objecten en overschrijft alleen de current alias-bestanden gecontroleerd. Snapshot-runs krijgen unieke paden en vermijden write-collisions.
 
 ## Kernroutes
 
@@ -47,8 +48,16 @@ De huidige Blob-adapter schrijft met `access: "public"`. Gebruik dus een Blob-se
 - `/artifacts` recente runs
 - `/runs/[id]` artifactviewer per run
 
+## Providerprofielen
+
+Zie [`docs/PROVIDER_PROFILES.md`](./docs/PROVIDER_PROFILES.md) voor:
+- verschillen per provider
+- bronverwijzingen
+- updatebeleid voor profielversies
+
 ## Notities
 
 - Bohèm is alleen referentiemateriaal.
 - De generator zelf blijft generiek.
 - Blocking validation issues worden niet opgeslagen als succesvolle run.
+- Oude runs zonder providerprompts blijven leesbaar via de base prompt fallback.

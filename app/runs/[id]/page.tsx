@@ -7,6 +7,7 @@ export default async function RunDetailPage({ params }: { params: Promise<{ id: 
   const { id } = await params;
   const run = await getStorage().getRun(id);
   if (!run) notFound();
+  const selectedProviders = run.selectedProviders ?? [];
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8 lg:py-16">
@@ -15,6 +16,13 @@ export default async function RunDetailPage({ params }: { params: Promise<{ id: 
           <p className="text-xs uppercase tracking-[0.32em] text-teal">Run</p>
           <h1 className="mt-3 font-serif text-5xl text-white">{run.input.project_context.brand}</h1>
           <p className="mt-4 text-lg leading-8 text-mist/80">{run.input.project_context.website_goal}</p>
+          <div className="mt-5 flex flex-wrap gap-2">
+            {selectedProviders.map((provider) => (
+              <span key={provider} className="rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm font-semibold text-white">
+                {provider}
+              </span>
+            ))}
+          </div>
         </div>
         <div className="rounded-3xl border border-white/10 bg-white/5 p-5 shadow-glow">
           <p className="text-xs uppercase tracking-[0.22em] text-amber">Status</p>
@@ -23,6 +31,7 @@ export default async function RunDetailPage({ params }: { params: Promise<{ id: 
           <div className="mt-4 space-y-2 text-sm leading-7 text-mist/80">
             <p>Warnings: {run.warnings.length}</p>
             <p>Blocking issues: {run.blockingIssues.length}</p>
+            <p>Providers: {selectedProviders.join(", ") || "base only"}</p>
           </div>
         </div>
       </div>
