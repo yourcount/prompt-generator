@@ -37,6 +37,16 @@ export type PromptRunInput = {
     paths: string[];
     categories: string[];
   };
+  reference_sources: {
+    existing_sites: string[];
+    content_priorities: string[];
+  };
+  brand_system: {
+    known_assets: string[];
+    style_guidelines: string[];
+    color_notes: string[];
+    typography_notes: string[];
+  };
   lessons_learned: Array<{
     label: LessonLabel;
     summary: string;
@@ -55,11 +65,12 @@ export type PromptRunInput = {
   selectedProviders?: ProviderId[];
 };
 
-export type SharedArtifactKey = "basePrompt" | "playbook" | "decisionRegister" | "promptEvents" | "runReport";
+export type SharedArtifactKey = "executionBundle" | "basePrompt" | "playbook" | "decisionRegister" | "promptEvents" | "runReport";
 export type LegacyArtifactKey = "superPrompt";
 export type DownloadArtifactKey = SharedArtifactKey | LegacyArtifactKey | `provider-${ProviderId}`;
 
 export type GeneratedArtifacts = {
+  executionBundle: string;
   basePrompt: string;
   playbook: string;
   decisionRegister: string;

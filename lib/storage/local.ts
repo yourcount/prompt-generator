@@ -32,6 +32,7 @@ async function writeText(filePath: string, value: string) {
 
 async function writeArtifacts(runDir: string, artifacts: GeneratedArtifacts) {
   const writes = [
+    [path.join(runDir, "executionBundle.md"), artifacts.executionBundle],
     [path.join(runDir, "basePrompt.md"), artifacts.basePrompt],
     [path.join(runDir, "playbook.md"), artifacts.playbook],
     [path.join(runDir, "decisionRegister.md"), artifacts.decisionRegister],

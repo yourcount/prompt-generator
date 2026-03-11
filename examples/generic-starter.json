@@ -25,8 +25,18 @@
     "tone_of_voice": "Helder, professioneel, menselijk en taakgericht"
   },
   "repo_artifacts": {
-    "paths": ["app/", "components/", "lib/"],
-    "categories": ["frontend", "admin", "seo", "security", "documentation"]
+    "paths": [
+      "app/",
+      "components/",
+      "lib/"
+    ],
+    "categories": [
+      "frontend",
+      "admin",
+      "seo",
+      "security",
+      "documentation"
+    ]
   },
   "lessons_learned": [
     {
@@ -64,5 +74,24 @@
     "Generator blijft generiek en JSON-first.",
     "Deze run automatiseert structuur en logging, niet inhoudelijke projectanalyse."
   ],
-  "selectedProviders": ["openai", "claude", "gemini"]
+  "selectedProviders": [
+    "openai",
+    "claude",
+    "gemini"
+  ],
+  "reference_sources": {
+    "existing_sites": [],
+    "content_priorities": [
+      "Merkpositionering",
+      "Kerncontent die herbruikbaar is voor de nieuwe site"
+    ]
+  },
+  "brand_system": {
+    "known_assets": [],
+    "style_guidelines": [
+      "Bestaande huisstijl is leidend als die bekend is."
+    ],
+    "color_notes": [],
+    "typography_notes": []
+  }
 }

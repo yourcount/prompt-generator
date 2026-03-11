@@ -39,6 +39,16 @@ const bohemInput: PromptRunInput = {
     paths: ["app/", "components/", "lib/", "docs/release-matrix.md"],
     categories: ["frontend", "admin", "super-admin", "seo", "security", "caching", "deployment"]
   },
+  reference_sources: {
+    existing_sites: ["https://musicbybohem.nl", "https://arthurbont.nl", "https://bettinakraaieveld.nl"],
+    content_priorities: ["Artiestenbio's", "Live & boekingsinformatie", "Persbare kerninformatie"]
+  },
+  brand_system: {
+    known_assets: ["Brand board", "Logo-elementen", "Nieuwe fotoseries", "Kleurenpalet en typografie"],
+    style_guidelines: ["Warm theatraal", "Vintage-modern", "Menselijk maar premium"],
+    color_notes: ["Amber, koper, roest, donkerblauw-groen"],
+    typography_notes: ["Display serif met karakter", "Body-font met hoge leesbaarheid"]
+  },
   run_metadata: {
     ...defaultRunInput.run_metadata,
     source_project: "Bohèm"
@@ -100,6 +110,16 @@ export const exampleCases: ExampleCase[] = [
       repo_artifacts: {
         paths: ["app/", "components/", "lib/", "scripts/"],
         categories: ["generator-core", "web-ui", "storage", "api", "documentation"]
+      },
+      reference_sources: {
+        existing_sites: ["https://prompt-generator-mu-one.vercel.app/"],
+        content_priorities: ["Uitleg van de workflow", "Artifacttoegankelijkheid", "Prompts per provider"]
+      },
+      brand_system: {
+        known_assets: ["Huidige UI-componenten en visuele tokens"],
+        style_guidelines: ["Niet-corporate devtool-uitstraling", "Taakgericht en helder"],
+        color_notes: ["Teal, amber en deep ink blijven de basis"],
+        typography_notes: ["Fraunces voor display", "Space Grotesk voor body"]
       },
       run_metadata: {
         ...defaultRunInput.run_metadata,

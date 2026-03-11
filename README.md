@@ -2,6 +2,21 @@
 
 Publieke Next.js webapp voor een provider-agnostische prompt generator. De site maakt de generator bruikbaar zonder terminal: met uitleg, een wizard, advanced JSON-invoer, directe artifactweergave en downloadbare output voor OpenAI, Claude en Gemini.
 
+De runinput ondersteunt ook:
+- bestaande websites die onderzocht moeten worden als bron voor content of structuur
+- bekende huisstijl, assets en merkguardrails die leidend moeten blijven in de nieuwe site
+
+De primaire output is nu:
+- `Execution Bundle`: compleet AI-werkpakket voor een nieuwe sessie
+
+Daarnaast blijven specialistische artifacts beschikbaar:
+- `Base Prompt`
+- providerprompts
+- `Playbook`
+- `Decision Register`
+- `Prompt Events`
+- `Run Report`
+
 ## Stack
 
 - Next.js App Router

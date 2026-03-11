@@ -17,6 +17,8 @@ const ROOT_KEYS = [
   "conversation_source",
   "project_context",
   "repo_artifacts",
+  "reference_sources",
+  "brand_system",
   "lessons_learned",
   "open_questions",
   "run_metadata"
@@ -109,6 +111,10 @@ function renderScopeNotes(items: string[]) {
   return items.length ? `\n## Scope Notes\n\n${renderBulletList(items, "[Aanvullen: scope note]")}\n` : "";
 }
 
+function renderOptionalSection(title: string, items: string[], emptyText: string) {
+  return `## ${title}\n\n${items.length ? renderBulletList(items, emptyText) : `- ${emptyText}`}\n`;
+}
+
 function renderAssumptions(input: PromptRunInput, selectedProviders: ProviderId[]) {
   const assumptions = [
     `Frameworkversie: ${input.run_metadata.framework_version}`,
@@ -168,7 +174,8 @@ export function normalizeGeneratedArtifacts(raw: unknown): GeneratedArtifacts {
   const providerPromptsValue = isPlainObject(value.providerPrompts) ? value.providerPrompts : {};
   const basePrompt = normalizeString(value.basePrompt) || normalizeString(value.superPrompt);
 
-  return {
+  const normalized: GeneratedArtifacts = {
+    executionBundle: normalizeString(value.executionBundle),
     basePrompt,
     playbook: normalizeString(value.playbook),
     decisionRegister: normalizeString(value.decisionRegister),
@@ -181,6 +188,136 @@ export function normalizeGeneratedArtifacts(raw: unknown): GeneratedArtifacts {
     },
     legacySuperPrompt: normalizeString(value.superPrompt) || basePrompt
   };
+
+  if (!normalized.executionBundle && normalized.basePrompt) {
+    const fallbackProviders = inferSelectedProviders(normalized);
+    normalized.executionBundle = renderExecutionBundle(
+      {
+        conversation_source: { type: "", source: "", summary: "" },
+        project_context: { brand: "", audiences: [], website_goal: "", features: [], constraints: [], tone_of_voice: "" },
+        repo_artifacts: { paths: [], categories: [] },
+        reference_sources: { existing_sites: [], content_priorities: [] },
+        brand_system: { known_assets: [], style_guidelines: [], color_notes: [], typography_notes: [] },
+        lessons_learned: [],
+        open_questions: [],
+        run_metadata: { date: "", operator: "", source_project: "", output_language: "nl", framework_version: "v4", template_version: "" },
+        success_criteria: [],
+        scope_notes: [],
+        selectedProviders: fallbackProviders
+      },
+      {
+        selectedProviders: fallbackProviders,
+        qualityScore: "warn",
+        validationResult: "valid_with_warnings",
+        warnings: ["Legacy run: execution bundle is achteraf afgeleid uit bestaande artifacts."],
+        blockingIssues: [],
+        playbook: normalized.playbook,
+        decisionRegister: normalized.decisionRegister,
+        basePrompt: normalized.basePrompt,
+        providerPrompts: normalized.providerPrompts
+      }
+    );
+  }
+
+  return normalized;
+}
+
+function renderExecutionBundle(
+  input: PromptRunInput,
+  params: {
+    selectedProviders: ProviderId[];
+    qualityScore: PromptRunResult["qualityScore"];
+    validationResult: PromptRunResult["validationResult"];
+    warnings: string[];
+    blockingIssues: string[];
+    playbook: string;
+    decisionRegister: string;
+    basePrompt: string;
+    providerPrompts: ProviderPromptMap;
+  }
+) {
+  const selectedPromptSections = params.selectedProviders
+    .map((provider) => {
+      const profile = getProviderProfile(provider);
+      const prompt = params.providerPrompts[provider];
+      if (!prompt) return "";
+      return `## ${profile.label} Prompt\n\n${prompt}`;
+    })
+    .filter(Boolean)
+    .join("\n\n");
+
+  return `# Execution Bundle voor ${input.project_context.brand}
+
+## Run status
+
+- Quality score: ${params.qualityScore}
+- Validation result: ${params.validationResult}
+- Providers: ${params.selectedProviders.join(", ")}
+- Blocking issues: ${params.blockingIssues.length}
+- Warnings: ${params.warnings.length}
+
+${params.blockingIssues.length > 0 ? `Stopregel: voer niets uit voordat deze blocking issues zijn opgelost.\n\n${renderBulletList(params.blockingIssues, "Geen blocking issues.")}` : "Stopregel: geen blocking issues; uitvoering mag starten binnen de vastgelegde grenzen."}
+
+## Artifact priority order
+
+1. Run Report
+2. Decision Register
+3. Playbook
+4. Base Prompt
+5. Geselecteerde providerprompt(s)
+6. Prompt Events alleen bij twijfel, audit of regressieanalyse
+
+## Operating rules
+
+- Als blocking issues bestaan: niet uitvoeren, eerst expliciet oplossen of escaleren.
+- Decision Register gaat voor als artifacts onderling lijken te conflicteren.
+- Base Prompt is de inhoudelijke bron van waarheid.
+- De providerprompt bepaalt hoe de instructies model-specifiek moeten worden uitgevoerd.
+- Playbook bepaalt werkwijze, patroonhergebruik en anti-patronen.
+- Prompt Events zijn auditinformatie en worden niet als primaire instructielaag gebruikt.
+
+## Execution brief
+
+- Project: ${input.project_context.brand}
+- Doel: ${input.project_context.website_goal}
+- Tone of voice: ${input.project_context.tone_of_voice}
+- Doelgroepen:
+${renderBulletList(input.project_context.audiences, "[Aanvullen: doelgroep]")}
+
+- Feature focus:
+${renderBulletList(input.project_context.features, "[Aanvullen: feature focus]")}
+
+- Constraints:
+${renderBulletList(input.project_context.constraints, "[Aanvullen: constraint]")}
+
+## Embedded artifacts
+
+## Run Report
+
+[Gebruik dit eerst als kwaliteitsfilter.]
+
+${params.warnings.length > 0 ? `### Warnings\n${renderBulletList(params.warnings, "Geen warnings.")}\n` : "### Warnings\n- Geen warnings.\n"}
+
+${params.blockingIssues.length > 0 ? `### Blocking issues\n${renderBulletList(params.blockingIssues, "Geen blocking issues.")}\n` : "### Blocking issues\n- Geen blocking issues.\n"}
+
+## Decision Register
+
+${params.decisionRegister}
+
+## Playbook
+
+${params.playbook}
+
+## Base Prompt
+
+${params.basePrompt}
+
+${selectedPromptSections}
+
+## Prompt Events
+
+Prompt Events zijn beschikbaar als aparte auditlog. Gebruik ze alleen als debug- of verificatielaag, niet als primaire instructiebron.
+`;
 }
 
 export function normalizeRunInput(raw: unknown): PromptRunInput {
@@ -188,6 +325,8 @@ export function normalizeRunInput(raw: unknown): PromptRunInput {
   const conversationSource = isPlainObject(value.conversation_source) ? value.conversation_source : {};
   const projectContext = isPlainObject(value.project_context) ? value.project_context : {};
   const repoArtifacts = isPlainObject(value.repo_artifacts) ? value.repo_artifacts : {};
+  const referenceSources = isPlainObject(value.reference_sources) ? value.reference_sources : {};
+  const brandSystem = isPlainObject(value.brand_system) ? value.brand_system : {};
   const runMetadata = isPlainObject(value.run_metadata) ? value.run_metadata : {};
   const lessonsLearned = Array.isArray(value.lessons_learned) ? value.lessons_learned : [];
   const selectedProviders = Array.isArray(value.selectedProviders) ? value.selectedProviders.map(normalizeProvider).filter(Boolean) as ProviderId[] : [];
@@ -209,6 +348,16 @@ export function normalizeRunInput(raw: unknown): PromptRunInput {
     repo_artifacts: {
       paths: Array.isArray(repoArtifacts.paths) ? repoArtifacts.paths.map(normalizeString).filter(Boolean) : [],
       categories: Array.isArray(repoArtifacts.categories) ? repoArtifacts.categories.map(normalizeString).filter(Boolean) : []
+    },
+    reference_sources: {
+      existing_sites: Array.isArray(referenceSources.existing_sites) ? referenceSources.existing_sites.map(normalizeString).filter(Boolean) : [],
+      content_priorities: Array.isArray(referenceSources.content_priorities) ? referenceSources.content_priorities.map(normalizeString).filter(Boolean) : []
+    },
+    brand_system: {
+      known_assets: Array.isArray(brandSystem.known_assets) ? brandSystem.known_assets.map(normalizeString).filter(Boolean) : [],
+      style_guidelines: Array.isArray(brandSystem.style_guidelines) ? brandSystem.style_guidelines.map(normalizeString).filter(Boolean) : [],
+      color_notes: Array.isArray(brandSystem.color_notes) ? brandSystem.color_notes.map(normalizeString).filter(Boolean) : [],
+      typography_notes: Array.isArray(brandSystem.typography_notes) ? brandSystem.typography_notes.map(normalizeString).filter(Boolean) : []
     },
     lessons_learned: lessonsLearned
       .filter(isPlainObject)
@@ -279,6 +428,14 @@ export function validateRunInput(input: PromptRunInput): ValidationSummary {
 
   if (input.success_criteria.length === 0) {
     warnings.push("success_criteria ontbreekt; output krijgt placeholders voor succescriteria.");
+  }
+
+  if (input.reference_sources.existing_sites.length === 0) {
+    warnings.push("reference_sources.existing_sites ontbreekt; bestaande websites worden niet meegenomen als contentbron.");
+  }
+
+  if (input.brand_system.known_assets.length === 0 && input.brand_system.style_guidelines.length === 0) {
+    warnings.push("brand_system bevat nog geen concrete huisstijlinput.");
   }
 
   input.lessons_learned.forEach((lesson, index) => {
@@ -444,6 +601,18 @@ Artifact-categorieen:
 
 ${renderBulletList(input.repo_artifacts.categories, "[Aanvullen: artifactcategorie]")}
 
+${renderOptionalSection("Bestaande sites om te onderzoeken", input.reference_sources.existing_sites, "[Aanvullen: bestaande site of URL]")}
+
+${renderOptionalSection("Contentprioriteiten voor site-analyse", input.reference_sources.content_priorities, "[Aanvullen: welke content uit bestaande sites belangrijk is]")}
+
+${renderOptionalSection("Bekende huisstijl-assets", input.brand_system.known_assets, "[Aanvullen: logo, beeldbank, brand board of ander asset]")}
+
+${renderOptionalSection("Huisstijlrichtlijnen", input.brand_system.style_guidelines, "[Aanvullen: stijlregel of merkguardrail]")}
+
+${renderOptionalSection("Kleurnotities", input.brand_system.color_notes, "[Aanvullen: kleur of paletnotitie]")}
+
+${renderOptionalSection("Typografienotities", input.brand_system.typography_notes, "[Aanvullen: typografie of fontnotitie]")}
+
 ## Aannames
 
 ${renderAssumptions(input, selectedProviders)}
@@ -518,6 +687,7 @@ Projectdoel:
 | Automatisering | Scaffold + merge | Houdt output bruikbaar zonder inhoud te verzinnen |
 | Outputlocaties | Vast en toegankelijk | Maakt tooling, review en downloads consistent |
 | Providerlaag | Base prompt + providerprofielen | Houdt één bron van waarheid en directe AI-inzet per provider |
+| Referentieonderzoek | Bestaande sites en huisstijl als expliciete input | Voorkomt dat bestaande merk- en contentbronnen buiten beeld vallen |
 | Snapshot-history | Per-run snapshot naast current output | Verbetert traceability en rollback |
 
 ## Providerprofielen
@@ -533,6 +703,12 @@ ${renderLessonsByLabel(input.lessons_learned)}
 ## Wat meenemen naar volgende run
 
 ${renderBulletList(input.lessons_learned.map((lesson) => lesson.summary), "[Aanvullen: takeaway]")}
+
+## Extra contextbronnen
+
+${renderOptionalSection("Bestaande sites", input.reference_sources.existing_sites, "[Aanvullen: bestaande site of URL]")}
+
+${renderOptionalSection("Huisstijlrichtlijnen", input.brand_system.style_guidelines, "[Aanvullen: huisstijlrichtlijn]")}
 
 ## Herbruikbare promptpatronen
 
@@ -590,6 +766,7 @@ function compareText(current: string | undefined, next: string) {
 
 function buildDiffSummary(artifacts: GeneratedArtifacts, currentArtifacts?: Partial<GeneratedArtifacts> | null): DiffItem[] {
   const items: DiffItem[] = [
+    { label: "EXECUTION_BUNDLE.md", status: compareText(currentArtifacts?.executionBundle, artifacts.executionBundle) },
     { label: "BASE_PROMPT.md", status: compareText(currentArtifacts?.basePrompt, artifacts.basePrompt) },
     { label: "PROMPT_PLAYBOOK.md", status: compareText(currentArtifacts?.playbook, artifacts.playbook) },
     { label: "decision-register.md", status: compareText(currentArtifacts?.decisionRegister, artifacts.decisionRegister) },
@@ -620,7 +797,7 @@ function renderPromptEvents(input: PromptRunInput, result: Pick<PromptRunResult,
       worker: "Conversation Analyst",
       event_type: "context_extracted",
       summary: `Runcontext voor ${input.run_metadata.source_project} uit JSON-input en repo-artifacts samengevoegd.`,
-      artifact_ref: "BASE_PROMPT.md",
+      artifact_ref: "EXECUTION_BUNDLE.md",
       timestamp: stamps[0]
     },
     {
@@ -683,6 +860,7 @@ function renderRunReport(
   const selectedProviders = result.selectedProviders ?? inferSelectedProviders(result.artifacts);
   const providerPlaceholderCount = Object.values(result.artifacts.providerPrompts).reduce((sum, artifact) => sum + (artifact ? countPlaceholders(artifact) : 0), 0);
   const placeholderCounts = {
+    executionBundle: countPlaceholders(result.artifacts.executionBundle),
     basePrompt: countPlaceholders(result.artifacts.basePrompt),
     playbook: countPlaceholders(result.artifacts.playbook),
     decisionRegister: countPlaceholders(result.artifacts.decisionRegister),
@@ -716,6 +894,7 @@ ${renderBulletList(result.warnings, "Geen warnings.")}
 
 ## Placeholder count per artifact
 
+- EXECUTION_BUNDLE.md: ${placeholderCounts.executionBundle}
 - BASE_PROMPT.md: ${placeholderCounts.basePrompt}
 - PROMPT_PLAYBOOK.md: ${placeholderCounts.playbook}
 - decision-register.md: ${placeholderCounts.decisionRegister}
@@ -734,6 +913,8 @@ ${summarizeDiff(result.diffSummary)}
 
 export function getDownloadArtifactContent(artifacts: GeneratedArtifacts, type: DownloadArtifactKey): string | null {
   switch (type) {
+    case "executionBundle":
+      return artifacts.executionBundle || null;
     case "basePrompt":
       return artifacts.basePrompt;
     case "playbook":
@@ -771,6 +952,7 @@ export function generatePromptRun(rawInput: unknown, options: GeneratePromptRunO
   }
 
   const baseArtifacts: GeneratedArtifacts = {
+    executionBundle: "",
     basePrompt,
     playbook: renderPlaybook(input, selectedProviders),
     decisionRegister: renderDecisionRegister(input),
@@ -782,6 +964,7 @@ export function generatePromptRun(rawInput: unknown, options: GeneratePromptRunO
 
   const warnings = [...initialWarnings];
   const placeholderCount = [
+    baseArtifacts.executionBundle,
     baseArtifacts.basePrompt,
     baseArtifacts.playbook,
     baseArtifacts.decisionRegister,
@@ -810,6 +993,18 @@ export function generatePromptRun(rawInput: unknown, options: GeneratePromptRunO
     diffSummary,
     selectedProviders
   };
+
+  baseArtifacts.executionBundle = renderExecutionBundle(input, {
+    selectedProviders,
+    qualityScore,
+    validationResult,
+    warnings,
+    blockingIssues,
+    playbook: baseArtifacts.playbook,
+    decisionRegister: baseArtifacts.decisionRegister,
+    basePrompt: baseArtifacts.basePrompt,
+    providerPrompts: baseArtifacts.providerPrompts
+  });
 
   baseArtifacts.runReport = renderRunReport(input, partialResult);
 

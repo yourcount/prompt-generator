@@ -5,6 +5,7 @@ import { useMemo, useState } from "react";
 import type { GeneratedArtifacts, ProviderId } from "@/lib/prompt-generator/types";
 
 const artifactTabs = [
+  { key: "executionBundle", label: "Execution Bundle" },
   { key: "prompt", label: "Prompts" },
   { key: "playbook", label: "Playbook" },
   { key: "decisionRegister", label: "Decision Register" },
@@ -30,7 +31,7 @@ function downloadText(filename: string, content: string) {
 }
 
 export function ArtifactTabs({ runId, artifacts, downloadable = true }: { runId?: string; artifacts: GeneratedArtifacts; downloadable?: boolean }) {
-  const [activeTab, setActiveTab] = useState<(typeof artifactTabs)[number]["key"]>("prompt");
+  const [activeTab, setActiveTab] = useState<(typeof artifactTabs)[number]["key"]>("executionBundle");
   const [activePromptTab, setActivePromptTab] = useState<"base" | ProviderId>("base");
 
   const availablePromptTabs = useMemo(() => {
@@ -42,6 +43,7 @@ export function ArtifactTabs({ runId, artifacts, downloadable = true }: { runId?
   }, [artifacts.providerPrompts]);
 
   const activeContent = useMemo(() => {
+    if (activeTab === "executionBundle") return artifacts.executionBundle;
     if (activeTab === "prompt") {
       if (activePromptTab === "base") return artifacts.basePrompt;
       return artifacts.providerPrompts[activePromptTab] ?? artifacts.basePrompt;
@@ -53,6 +55,7 @@ export function ArtifactTabs({ runId, artifacts, downloadable = true }: { runId?
   }, [activePromptTab, activeTab, artifacts]);
 
   const activeDownloadType = useMemo(() => {
+    if (activeTab === "executionBundle") return "executionBundle";
     if (activeTab === "prompt") {
       return activePromptTab === "base" ? "basePrompt" : `provider-${activePromptTab}`;
     }
@@ -126,6 +129,11 @@ export function ArtifactTabs({ runId, artifacts, downloadable = true }: { runId?
       <pre className="code-scroll mt-5 overflow-x-auto rounded-3xl border border-white/10 bg-ink/80 p-4 text-sm leading-7 text-mist/90">
         <code>{activeContent}</code>
       </pre>
+      {activeTab === "executionBundle" ? (
+        <div className="mt-4 rounded-2xl border border-amber/30 bg-amber/10 p-4 text-sm text-mist/90">
+          Gebruik dit als compleet AI-werkpakket wanneer de AI-assistent het hele team vormt.
+        </div>
+      ) : null}
       {activeTab === "prompt" ? (
         <div className="mt-4 rounded-2xl border border-teal/30 bg-teal/10 p-4 text-sm text-mist/90">
           Gebruik de base prompt als neutrale basis of kies een provider-tab voor directe inzet in je AI-workflow.

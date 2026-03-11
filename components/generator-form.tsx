@@ -11,7 +11,7 @@ import type { LessonLabel, PromptRunInput, ProviderId } from "@/lib/prompt-gener
 const steps = [
   { title: "Projectcontext", helper: "Wie is het project, wat is het doel en welke AI-profielen moeten direct output krijgen?" },
   { title: "Doelgroepen en doelen", helper: "Voor wie maak je deze prompt-run en wat moet hij concreet afdwingen?" },
-  { title: "Repo-artifacts", helper: "Welke paden en categorieën onderbouwen de run?" },
+  { title: "Bronnen en huisstijl", helper: "Welke repo-paden, bestaande sites en huisstijlinput moeten de nieuwe site sturen?" },
   { title: "Lessons learned", helper: "Leg vast wat werkte, wat misging en wat structureel is veranderd." },
   { title: "Open vragen en scope notes", helper: "Welke ambiguities zijn er nog en welke scopekaders moeten zichtbaar blijven?" },
   { title: "Review en genereren", helper: "Controleer de runinput voordat je artifacts laat maken." }
@@ -164,6 +164,9 @@ export function GeneratorForm() {
                     })}
                   </div>
                 </Field>
+                <Field label="Bestaande sites om te onderzoeken" help="Voeg URLs toe van bestaande sites waarvan content of structuur hergebruikt moet worden, één per regel.">
+                  <textarea className="textarea" value={toMultiline(form.reference_sources.existing_sites)} onChange={(e) => updateForm({ ...form, reference_sources: { ...form.reference_sources, existing_sites: fromMultiline(e.target.value) } })} />
+                </Field>
               </>
             ) : null}
 
@@ -189,6 +192,23 @@ export function GeneratorForm() {
                 <Field label="Artifact-categorieën" help="Gebruik dit als sommige repo-paden nog niet exact bekend zijn.">
                   <textarea className="textarea" value={toMultiline(form.repo_artifacts.categories)} onChange={(e) => updateForm({ ...form, repo_artifacts: { ...form.repo_artifacts, categories: fromMultiline(e.target.value) } })} />
                 </Field>
+                <Field label="Contentprioriteiten uit bestaande sites" help="Beschrijf welke content je vooral uit bestaande sites wilt halen, bijvoorbeeld bio's, services, FAQ of positionering.">
+                  <textarea className="textarea" value={toMultiline(form.reference_sources.content_priorities)} onChange={(e) => updateForm({ ...form, reference_sources: { ...form.reference_sources, content_priorities: fromMultiline(e.target.value) } })} />
+                </Field>
+                <Field label="Bekende huisstijl-assets" help="Eén asset per regel, bijvoorbeeld brand board, logo-map, beeldbank of style guide PDF.">
+                  <textarea className="textarea" value={toMultiline(form.brand_system.known_assets)} onChange={(e) => updateForm({ ...form, brand_system: { ...form.brand_system, known_assets: fromMultiline(e.target.value) } })} />
+                </Field>
+                <Field label="Huisstijlrichtlijnen" help="Gebruik dit voor merkregels die al vastliggen, bijvoorbeeld sfeer, vormtaal of beeldrichting.">
+                  <textarea className="textarea" value={toMultiline(form.brand_system.style_guidelines)} onChange={(e) => updateForm({ ...form, brand_system: { ...form.brand_system, style_guidelines: fromMultiline(e.target.value) } })} />
+                </Field>
+                <div className="grid gap-4 md:grid-cols-2">
+                  <Field label="Kleurnotities" help="Bijvoorbeeld bestaande kleuren, paletten of contrastvereisten.">
+                    <textarea className="textarea" value={toMultiline(form.brand_system.color_notes)} onChange={(e) => updateForm({ ...form, brand_system: { ...form.brand_system, color_notes: fromMultiline(e.target.value) } })} />
+                  </Field>
+                  <Field label="Typografienotities" help="Bijvoorbeeld bestaande fonts, fallback-richtingen of leesbaarheidseisen.">
+                    <textarea className="textarea" value={toMultiline(form.brand_system.typography_notes)} onChange={(e) => updateForm({ ...form, brand_system: { ...form.brand_system, typography_notes: fromMultiline(e.target.value) } })} />
+                  </Field>
+                </div>
                 <Field label="Constraints" help="Denk aan scope, teamgrenzen, kwaliteitseisen en deploymentrandvoorwaarden.">
                   <textarea className="textarea" value={toMultiline(form.project_context.constraints)} onChange={(e) => updateForm({ ...form, project_context: { ...form.project_context, constraints: fromMultiline(e.target.value) } })} />
                 </Field>
@@ -278,14 +298,16 @@ export function GeneratorForm() {
       <aside className="space-y-6">
         <div className="rounded-3xl border border-white/10 bg-white/5 p-5 shadow-glow">
           <p className="text-xs uppercase tracking-[0.22em] text-amber">Waarom vragen we dit?</p>
-          <p className="mt-3 text-sm leading-7 text-mist/80">De wizard vraagt alleen de input die de generator nodig heeft om context, lessons learned, quality gates en provider-specifieke promptvarianten consistent op te bouwen.</p>
+          <p className="mt-3 text-sm leading-7 text-mist/80">De wizard vraagt alleen de input die de generator nodig heeft om context, lessons learned, quality gates, bestaande site-analyse en provider-specifieke promptvarianten consistent op te bouwen.</p>
         </div>
         <div className="rounded-3xl border border-white/10 bg-white/5 p-5 shadow-glow">
           <p className="text-xs uppercase tracking-[0.22em] text-teal">Wat komt eruit?</p>
           <ul className="mt-3 space-y-3 text-sm leading-7 text-mist/80">
+            <li>Execution Bundle als compleet AI-werkpakket</li>
             <li>Base prompt als neutrale bron van waarheid</li>
             <li>Direct inzetbare prompts voor OpenAI, Claude en Gemini</li>
             <li>Playbook, decision register, eventlog en run-report</li>
+            <li>Expliciete context voor bestaande sites en bekende huisstijl</li>
             <li>Traceerbare output die je kunt kopiëren of downloaden</li>
           </ul>
         </div>

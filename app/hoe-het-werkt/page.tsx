@@ -13,6 +13,8 @@ export default function HowItWorksPage() {
           <ul className="space-y-3 text-sm leading-7 text-mist/80">
             <li>Projectcontext bepaalt doel en toon.</li>
             <li>Repo-artifacts maken claims evidence-based.</li>
+            <li>Bestaande websites kunnen als expliciete onderzoeksbron worden meegenomen.</li>
+            <li>Bekende huisstijl houdt ontwerp- en contentbeslissingen merkconsistent.</li>
             <li>Lessons learned voorkomen herhaalde fouten.</li>
             <li>Open questions zorgen dat high-impact ambiguities niet verdwijnen.</li>
             <li>Providerselectie bepaalt welke directe promptvarianten worden gerenderd.</li>
@@ -20,6 +22,7 @@ export default function HowItWorksPage() {
         </SectionShell>
         <SectionShell title="Wat krijg je terug?" intro="Elke run levert gedeelde artifacts en provider-specifieke promptvarianten op. Je hoeft dus niet te zoeken in losse logs of markdownbestanden.">
           <ul className="space-y-3 text-sm leading-7 text-mist/80">
+            <li>Execution Bundle als primair werkpakket voor een AI-assistent.</li>
             <li>Base prompt als neutrale bron van waarheid.</li>
             <li>Direct inzetbare prompts voor OpenAI, Claude en Gemini.</li>
             <li>Prompt playbook met rationale en anti-patronen.</li>
@@ -28,6 +31,13 @@ export default function HowItWorksPage() {
           </ul>
         </SectionShell>
       </div>
+      <SectionShell eyebrow="Wanneer gebruik je wat?" title="Execution Bundle eerst, losse artifacts wanneer nodig" intro="Als de AI-assistent het hele team vormt, gebruik je de Execution Bundle als primaire ingang. De losse artifacts blijven beschikbaar voor debugging, review en specialistische analyse.">
+        <ul className="space-y-3 text-sm leading-7 text-mist/80">
+          <li>Gebruik <strong>Execution Bundle</strong> voor de eerste AI-sessie of als volledig contextpakket.</li>
+          <li>Gebruik <strong>Prompts</strong> apart als je alleen de provider-specifieke uitvoeringsprompt nodig hebt.</li>
+          <li>Gebruik <strong>Prompt Events</strong> alleen bij twijfel, regressies of auditing.</li>
+        </ul>
+      </SectionShell>
       <SectionShell eyebrow="Laatst geverifieerd" title="Providerprofielen en bronvermelding" intro="Promptprofielen zijn versioned in code. Elke profielkaart laat zien welke modelfamilie wordt aangehouden en wanneer het profiel voor het laatst is getoetst aan officiële documentatie.">
         <ProviderProfileCards />
       </SectionShell>

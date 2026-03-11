@@ -6,6 +6,7 @@ import type { DownloadArtifactKey } from "@/lib/prompt-generator/types";
 export const runtime = "nodejs";
 
 const allowedTypes: DownloadArtifactKey[] = [
+  "executionBundle",
   "basePrompt",
   "playbook",
   "decisionRegister",

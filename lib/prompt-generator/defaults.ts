@@ -32,6 +32,22 @@ export const defaultRunInput: PromptRunInput = {
     paths: ["app/", "components/", "lib/"],
     categories: ["frontend", "admin", "seo", "security", "documentation"]
   },
+  reference_sources: {
+    existing_sites: [],
+    content_priorities: [
+      "Heldere merkpositionering en tone of voice",
+      "Herbruikbare contentblokken die de nieuwe site sneller op gang helpen"
+    ]
+  },
+  brand_system: {
+    known_assets: [],
+    style_guidelines: [
+      "Bestaande huisstijl is leidend als die expliciet is meegegeven.",
+      "Nieuwe voorstellen mogen de bestaande merkconsistentie niet ondermijnen."
+    ],
+    color_notes: [],
+    typography_notes: []
+  },
   lessons_learned: [
     {
       label: "success",

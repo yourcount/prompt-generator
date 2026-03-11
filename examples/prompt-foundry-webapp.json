@@ -27,8 +27,19 @@
     "tone_of_voice": "Helder, warm, deskundig en taakgericht"
   },
   "repo_artifacts": {
-    "paths": ["app/", "components/", "lib/", "scripts/"],
-    "categories": ["generator-core", "web-ui", "storage", "api", "documentation"]
+    "paths": [
+      "app/",
+      "components/",
+      "lib/",
+      "scripts/"
+    ],
+    "categories": [
+      "generator-core",
+      "web-ui",
+      "storage",
+      "api",
+      "documentation"
+    ]
   },
   "lessons_learned": [
     {
@@ -66,5 +77,35 @@
     "Bohèm blijft een reference case.",
     "Outputviewer moet ook zonder voorkennis begrijpelijk zijn."
   ],
-  "selectedProviders": ["openai", "claude", "gemini"]
+  "selectedProviders": [
+    "openai",
+    "claude",
+    "gemini"
+  ],
+  "reference_sources": {
+    "existing_sites": [
+      "https://prompt-generator-mu-one.vercel.app/"
+    ],
+    "content_priorities": [
+      "Workflow-uitleg",
+      "Provider-specifieke promptoutput",
+      "Artifact-viewer"
+    ]
+  },
+  "brand_system": {
+    "known_assets": [
+      "Bestaande Prompt Foundry interface en componenten"
+    ],
+    "style_guidelines": [
+      "Niet-corporate devtool uitstraling",
+      "Helder en taakgericht"
+    ],
+    "color_notes": [
+      "Teal, amber, deep ink"
+    ],
+    "typography_notes": [
+      "Fraunces display",
+      "Space Grotesk body"
+    ]
+  }
 }

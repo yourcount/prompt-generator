@@ -28,6 +28,7 @@ async function main() {
   console.log(`Run: ${runId}`);
   console.log(`Quality: ${result.qualityScore}`);
   console.log(`Providers: ${selected.join(", ")}`);
+  console.log("Artifacts: executionBundle, basePrompt, provider prompts, playbook, decisionRegister, promptEvents, runReport");
   console.log(result.artifacts.runReport);
 
   if (result.qualityScore === "fail") {

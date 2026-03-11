@@ -46,6 +46,7 @@ async function putText(pathname: string, value: string, allowOverwrite = false) 
 
 async function writeArtifacts(base: string, artifacts: GeneratedArtifacts) {
   const writes = [
+    [`${base}/executionBundle.md`, artifacts.executionBundle],
     [`${base}/basePrompt.md`, artifacts.basePrompt],
     [`${base}/playbook.md`, artifacts.playbook],
     [`${base}/decisionRegister.md`, artifacts.decisionRegister],
