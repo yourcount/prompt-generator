@@ -45,16 +45,18 @@ async function putText(pathname: string, value: string, allowOverwrite = false) 
 }
 
 async function writeArtifacts(base: string, artifacts: GeneratedArtifacts) {
-  await Promise.all([
-    putText(`${base}/basePrompt.md`, artifacts.basePrompt),
-    putText(`${base}/playbook.md`, artifacts.playbook),
-    putText(`${base}/decisionRegister.md`, artifacts.decisionRegister),
-    putText(`${base}/promptEvents.md`, artifacts.promptEvents),
-    putText(`${base}/runReport.md`, artifacts.runReport),
-    putText(`${base}/provider-openai.md`, artifacts.providerPrompts.openai ?? ""),
-    putText(`${base}/provider-claude.md`, artifacts.providerPrompts.claude ?? ""),
-    putText(`${base}/provider-gemini.md`, artifacts.providerPrompts.gemini ?? "")
-  ]);
+  const writes = [
+    [`${base}/basePrompt.md`, artifacts.basePrompt],
+    [`${base}/playbook.md`, artifacts.playbook],
+    [`${base}/decisionRegister.md`, artifacts.decisionRegister],
+    [`${base}/promptEvents.md`, artifacts.promptEvents],
+    [`${base}/runReport.md`, artifacts.runReport],
+    [`${base}/provider-openai.md`, artifacts.providerPrompts.openai],
+    [`${base}/provider-claude.md`, artifacts.providerPrompts.claude],
+    [`${base}/provider-gemini.md`, artifacts.providerPrompts.gemini]
+  ].filter((entry): entry is [string, string] => typeof entry[1] === "string" && entry[1].trim().length > 0);
+
+  await Promise.all(writes.map(([pathname, value]) => putText(pathname, value)));
 }
 
 export function createBlobStorage(): StorageAdapter {

@@ -31,16 +31,18 @@ async function writeText(filePath: string, value: string) {
 }
 
 async function writeArtifacts(runDir: string, artifacts: GeneratedArtifacts) {
-  await Promise.all([
-    writeText(path.join(runDir, "basePrompt.md"), artifacts.basePrompt),
-    writeText(path.join(runDir, "playbook.md"), artifacts.playbook),
-    writeText(path.join(runDir, "decisionRegister.md"), artifacts.decisionRegister),
-    writeText(path.join(runDir, "promptEvents.md"), artifacts.promptEvents),
-    writeText(path.join(runDir, "runReport.md"), artifacts.runReport),
-    writeText(path.join(runDir, "provider-openai.md"), artifacts.providerPrompts.openai ?? ""),
-    writeText(path.join(runDir, "provider-claude.md"), artifacts.providerPrompts.claude ?? ""),
-    writeText(path.join(runDir, "provider-gemini.md"), artifacts.providerPrompts.gemini ?? "")
-  ]);
+  const writes = [
+    [path.join(runDir, "basePrompt.md"), artifacts.basePrompt],
+    [path.join(runDir, "playbook.md"), artifacts.playbook],
+    [path.join(runDir, "decisionRegister.md"), artifacts.decisionRegister],
+    [path.join(runDir, "promptEvents.md"), artifacts.promptEvents],
+    [path.join(runDir, "runReport.md"), artifacts.runReport],
+    [path.join(runDir, "provider-openai.md"), artifacts.providerPrompts.openai],
+    [path.join(runDir, "provider-claude.md"), artifacts.providerPrompts.claude],
+    [path.join(runDir, "provider-gemini.md"), artifacts.providerPrompts.gemini]
+  ].filter((entry): entry is [string, string] => typeof entry[1] === "string" && entry[1].trim().length > 0);
+
+  await Promise.all(writes.map(([filePath, value]) => writeText(filePath, value)));
 }
 
 export function createLocalStorage(): StorageAdapter {
