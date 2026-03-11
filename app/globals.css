@@ -1,0 +1,29 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: dark;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  @apply min-h-screen bg-aurora text-mist antialiased;
+}
+
+::selection {
+  background: rgba(240, 165, 74, 0.35);
+  color: white;
+}
+
+.prose-shell {
+  @apply rounded-3xl border border-white/10 bg-white/5 backdrop-blur;
+}
+
+.code-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(63,210,199,0.55) transparent;
+}

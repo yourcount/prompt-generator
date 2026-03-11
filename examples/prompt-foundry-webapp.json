@@ -1,0 +1,57 @@
+{
+  "conversation_source": {
+    "type": "phase-summary",
+    "source": "Implementatiebrief voor Prompt Foundry",
+    "summary": "Nieuwe publieke webapp die de v3 prompt-generator als wizard, advanced panel en artifactviewer beschikbaar maakt, inclusief uitleg, voorbeelden en Vercel-ready opslag."
+  },
+  "project_context": {
+    "brand": "Prompt Foundry",
+    "audiences": [
+      "Niet-technische makers die een generator zonder terminal willen gebruiken",
+      "Technische builders die parity tussen CLI en web willen behouden",
+      "Projectleads die alle output van een generator-run direct willen kunnen delen"
+    ],
+    "website_goal": "Bouw een publieke, gebruiksvriendelijke webinterface voor de v3 prompt-generator, inclusief uitleg, echte runs en toegankelijke artifacts.",
+    "features": [
+      "Wizard-first generatorinterface met advanced JSON-panel",
+      "Artifactviewer met tabs, kopieeracties en downloads",
+      "Runopslag met current output en snapshots",
+      "Uitlegpagina's en reference cases"
+    ],
+    "constraints": [
+      "Generator moet generiek blijven",
+      "Web en CLI moeten dezelfde core logica delen",
+      "Productie-opslag moet Vercel-ready zijn",
+      "Geen login in v1"
+    ],
+    "tone_of_voice": "Helder, warm, deskundig en taakgericht"
+  },
+  "repo_artifacts": {
+    "paths": ["app/", "components/", "lib/", "scripts/"],
+    "categories": ["generator-core", "web-ui", "storage", "api", "documentation"]
+  },
+  "lessons_learned": [
+    { "label": "success", "summary": "Een wizard met duidelijke helperteksten verlaagt de drempel voor niet-technische gebruikers." },
+    { "label": "regression", "summary": "File-only opslag botst met serverless deploys als er geen adapterlaag is." },
+    { "label": "misunderstanding", "summary": "Voorbeeldcases moeten expliciet referentie blijven, anders voelt de generator merkgebonden." },
+    { "label": "process_change", "summary": "De generator-core moet gedeeld worden tussen web en CLI om parity en onderhoudbaarheid te houden." }
+  ],
+  "open_questions": [],
+  "run_metadata": {
+    "date": "2026-03-11",
+    "operator": "CLI",
+    "source_project": "Prompt Foundry",
+    "output_language": "nl",
+    "framework_version": "v3",
+    "template_version": "2026-03-v1"
+  },
+  "success_criteria": [
+    "Een gemengd publiek moet zonder terminal een valide generator-run kunnen starten.",
+    "Artifacts moeten direct leesbaar, kopieerbaar en downloadbaar zijn.",
+    "Parity tussen web en CLI moet intact blijven."
+  ],
+  "scope_notes": [
+    "Bohèm blijft een reference case.",
+    "Outputviewer moet ook zonder voorkennis begrijpelijk zijn."
+  ]
+}
